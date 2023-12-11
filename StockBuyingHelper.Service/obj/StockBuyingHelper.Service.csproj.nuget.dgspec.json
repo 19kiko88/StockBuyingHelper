@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "D:\\Homer\\Project_MyGit\\StockBuingHelper\\StockBuyingHelper.Service\\StockBuyingHelper.Service.csproj": {}
+    "D:\\Homer\\Project_MyGit\\StockBuyingHelper\\StockBuyingHelper.Service\\StockBuyingHelper.Service.csproj": {}
   },
   "projects": {
-    "D:\\Homer\\Project_MyGit\\StockBuingHelper\\StockBuyingHelper.Service\\StockBuyingHelper.Service.csproj": {
+    "D:\\Homer\\Project_MyGit\\StockBuyingHelper\\StockBuyingHelper.Service\\StockBuyingHelper.Service.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\Homer\\Project_MyGit\\StockBuingHelper\\StockBuyingHelper.Service\\StockBuyingHelper.Service.csproj",
+        "projectUniqueName": "D:\\Homer\\Project_MyGit\\StockBuyingHelper\\StockBuyingHelper.Service\\StockBuyingHelper.Service.csproj",
         "projectName": "StockBuyingHelper.Service",
-        "projectPath": "D:\\Homer\\Project_MyGit\\StockBuingHelper\\StockBuyingHelper.Service\\StockBuyingHelper.Service.csproj",
+        "projectPath": "D:\\Homer\\Project_MyGit\\StockBuyingHelper\\StockBuyingHelper.Service\\StockBuyingHelper.Service.csproj",
         "packagesPath": "C:\\Users\\homer_chen\\.nuget\\packages\\",
-        "outputPath": "D:\\Homer\\Project_MyGit\\StockBuingHelper\\StockBuyingHelper.Service\\obj\\",
+        "outputPath": "D:\\Homer\\Project_MyGit\\StockBuyingHelper\\StockBuyingHelper.Service\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
