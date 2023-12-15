@@ -1,21 +1,16 @@
 ﻿using AngleSharp;
+using AngleSharp.Dom;
 using StockBuyingHelper.Service.Interfaces;
 using StockBuyingHelper.Service.Models;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Security.Cryptography.X509Certificates;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace StockBuyingHelper.Service.Implements
 {
     public class StockService: IStockService
     {
-        public async Task<string> GetStockList()
+        public async Task<List<StockInfo>> GetStockList()
         {
-            var res = "";
+            var res = new List<StockInfo>();
             var httpClient = new HttpClient();
             var url = "https://isin.twse.com.tw/isin/C_public.jsp?strMode=2";
             var resMessage = await httpClient.GetAsync(url);
@@ -26,9 +21,33 @@ namespace StockBuyingHelper.Service.Implements
                 Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);//註冊BIG 5編碼
                 using (var sr = new StreamReader(await resMessage.Content.ReadAsStreamAsync(), Encoding.GetEncoding(950)))
                 {
-                    res = sr.ReadToEnd();
+                    var htmlString = sr.ReadToEnd();
+                    var config = Configuration.Default;
+                    var context = BrowsingContext.New(config);
+                    var document = await context.OpenAsync(res => res.Content(htmlString));
+                    var listTR = document.QuerySelectorAll("tr");
+
+                    foreach (var tr in listTR)
+                    {
+                        var arrayTd = tr.Children.ToArray();
+                        if (tr.Children.Length >= 7)
+                        {
+                            res.Add(new StockInfo()
+                            {
+                                StockId = arrayTd[0].TextContent.Split('　')[0],
+                                StockName = arrayTd[0].TextContent.Split('　').Length == 2 ? arrayTd[0].TextContent.Split('　')[1] : "",
+                                ISINCode = arrayTd[1].TextContent,
+                                Market = arrayTd[3].TextContent,
+                                IndustryType = arrayTd[4].TextContent,
+                                CFICode = arrayTd[5].TextContent,
+                                Note = arrayTd[6].TextContent
+                            });
+                        }
+                    }
                 }                
             }
+
+            res = res.Where(c => c.CFICode == "ESVUFR" || c.CFICode.StartsWith("CEO")).ToList();
 
             return res;
         }
@@ -93,6 +112,146 @@ namespace StockBuyingHelper.Service.Implements
                 }
 
                 res = datas;
+            }
+
+            return res;
+        }
+
+        public async Task<List<StockPrice>> GetPrice()
+        {
+            var res = new List<StockPrice>();
+
+            try
+            {
+                var httpClient = new HttpClient();
+                //var listPrice = new List<StockPrice>();
+                //var url = $"https://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch=tse_{id}.tw&json=1&delay=0";
+                //var url = "https://histock.tw/stock/rank.aspx?&p=1&d=1";
+                var url = "https://histock.tw/stock/rank.aspx?p=all";
+
+                var resMessage = await httpClient.GetAsync(url);
+
+                //檢查回應的伺服器狀態StatusCode是否是200 OK
+                if (resMessage.StatusCode == System.Net.HttpStatusCode.OK)
+                {
+                    var sr = await resMessage.Content.ReadAsStringAsync();
+                    var config = Configuration.Default;
+                    var context = BrowsingContext.New(config);
+                    var document = await context.OpenAsync(res => res.Content(sr));
+
+                    var listTR = document.QuerySelectorAll("#CPHB1_gv tr");
+                    foreach (var tr in listTR)
+                    {
+                        if (tr.Index() == 0)
+                        {
+                            continue;
+                        }
+
+                        res.Add(new StockPrice()
+                        {
+                            StockId = tr.Children[0].InnerHtml,
+                            StockName = tr.Children[1].Children[0].InnerHtml,
+                            Price = Convert.ToDecimal(tr.Children[2].Children[0].InnerHtml)
+                        });
+                    }
+                }
+
+            }
+            catch (Exception ex)
+            {
+                var errMsg = ex.Message;
+            }
+
+            return res;
+        }
+
+        public async Task<List<VtiInfo>> GetVTI(List<StockPrice> priceData, List<GetHighLowIn52WeeksInfo> highLowData, int amountLimit = 0)
+        {
+            var listVTI =
+                (from a in priceData
+                join b in highLowData on a.StockId equals b.StockId
+                select new VtiInfo {
+                    StockId = a.StockId,
+                    StockName = a.StockName,
+                    Price = a.Price,
+                    HighIn52 = b.HighPriceInCurrentYear,
+                    LowIn52 = b.LowPriceInCurrentYear
+                }).ToList();
+
+            foreach (var item in listVTI)
+            {
+                try
+                {
+                    var diffHigh = (item.HighIn52 - item.LowIn52) == 0M ? 0.01M : (item.HighIn52 - item.LowIn52);
+
+                    /*
+                     *Ref：https://www.facebook.com/1045010642367425/posts/1076024329266056/
+                     *
+                     */
+                    item.VTI = 1 - (item.Price - item.LowIn52) / diffHigh;
+                    item.Amount = Convert.ToInt32(Math.Round(item.VTI, 2) * 1000);
+                }
+                catch (Exception ex)
+                {
+                    var msg = ex.Message;
+                }
+            }
+
+            if (amountLimit > 0)
+            {
+                listVTI = listVTI.Where(c => c.Amount > amountLimit).ToList();
+            }
+
+            return listVTI;
+        }   
+        
+        public async Task<List<EpsInfo>> GetEPS(List<VtiInfo> data)
+        {
+            var res = new List<EpsInfo>();
+
+            try
+            {
+                var httpClient = new HttpClient();
+
+                foreach (var item in data) 
+                {
+                    var url = $"https://tw.stock.yahoo.com/quote/{item.StockId}.TW/eps";//eps
+                    //var url_revenue = https://tw.stock.yahoo.com/quote/2317.TW/revenue; //營收
+                    var resMessage = await httpClient.GetAsync(url);
+
+                    //檢查回應的伺服器狀態StatusCode是否是200 OK
+                    if (resMessage.StatusCode == System.Net.HttpStatusCode.OK)
+                    {
+                        var sr = await resMessage.Content.ReadAsStringAsync();
+                        var config = Configuration.Default;
+                        var context = BrowsingContext.New(config);
+                        var document = await context.OpenAsync(res => res.Content(sr));
+
+                        var listTR = document.QuerySelectorAll("#main-3-QuoteFinanceEps-Proxy .table-body-wrapper li");
+                        var epsInfo = new EpsInfo() { StockId = item.StockId, StockName = item.StockName };
+                        var sn = 1;
+                        foreach (var tr in listTR)
+                        {
+                            if (sn <= 4)
+                            {//只取最近4季的EPS
+                                epsInfo.EPS += Convert.ToDecimal(tr.QuerySelector("span").InnerHtml);
+                                sn++;
+                            }
+                            else
+                            {
+                                break;
+                            }
+                        }
+
+                        var reEPS = epsInfo.EPS == 0.0M ? 0.01M : epsInfo.EPS;
+                        epsInfo.PE = Convert.ToDouble( Math.Round(item.Price / reEPS, 2) );
+                        res.Add(epsInfo);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                var errMsg = ex.Message;
             }
 
             return res;

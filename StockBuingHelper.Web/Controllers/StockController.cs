@@ -20,8 +20,24 @@ namespace StockBuingHelper.Web.Controllers
         [HttpGet]
         public async Task<string> GetStockList()
         {
-            //var res = await _stockService.GetStockList();
-            var ress = await _stockService.GetHighLowIn52Weeks();
+            //var listStockInfo = await _stockService.GetStockList();
+            var listPrice = await _stockService.GetPrice();
+            var listHighLow = await _stockService.GetHighLowIn52Weeks();
+            var listVti = await _stockService.GetVTI(listPrice, listHighLow, 700);
+            var listEps = await _stockService.GetEPS(listVti);
+
+            var qq =
+                (
+                from a in listVti
+                join b in listEps on a.StockId equals b.StockId
+                select new { a.StockId, a.StockName, a.Price, a.HighIn52, a.LowIn52, b.EPS, b.PE, a.VTI, a.Amount }
+                ).ToList()
+                .Where(c => c.EPS > 0 && c.PE < 30)
+                .OrderByDescending(o => o.EPS);
+                //.OrderBy(o => o.PE);
+                //.OrderByDescending(o => o.VTI);             
+                
+
             return "";
         }
     }
