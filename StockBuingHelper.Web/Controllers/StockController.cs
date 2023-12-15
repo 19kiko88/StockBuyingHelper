@@ -18,7 +18,7 @@ namespace StockBuingHelper.Web.Controllers
         }
 
         [HttpGet]
-        public async Task<string> GetStockList()
+        public async Task<string> GetVtiData()
         {
             //var listStockInfo = await _stockService.GetStockList();
             var listPrice = await _stockService.GetPrice();

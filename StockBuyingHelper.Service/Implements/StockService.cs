@@ -186,7 +186,7 @@ namespace StockBuyingHelper.Service.Implements
 
                     /*
                      *Ref：https://www.facebook.com/1045010642367425/posts/1076024329266056/
-                     *
+                     *在近52周最高最低價格區間內，目前價格離最高價還有多少百分比(vti越高，表示離52周區間內最高點越近)
                      */
                     item.VTI = 1 - (item.Price - item.LowIn52) / diffHigh;
                     item.Amount = Convert.ToInt32(Math.Round(item.VTI, 2) * 1000);
