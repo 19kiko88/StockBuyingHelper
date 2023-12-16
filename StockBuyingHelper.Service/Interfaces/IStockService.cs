@@ -14,5 +14,6 @@ namespace StockBuyingHelper.Service.Interfaces
         public Task<List<StockPrice>> GetPrice();
         public Task<List<VtiInfo>> GetVTI(List<StockPrice> priceData, List<GetHighLowIn52WeeksInfo> highLowData, int amountLimit = 0);
         public Task<List<EpsInfo>> GetEPS(List<VtiInfo> data);
+        public Task<List<RevenueInfo>> GetRevenue(List<VtiInfo> data);
     }
 }

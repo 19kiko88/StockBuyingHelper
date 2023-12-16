@@ -188,7 +188,7 @@ namespace StockBuyingHelper.Service.Implements
                      *Ref：https://www.facebook.com/1045010642367425/posts/1076024329266056/
                      *在近52周最高最低價格區間內，目前價格離最高價還有多少百分比(vti越高，表示離52周區間內最高點越近)
                      */
-                    item.VTI = 1 - (item.Price - item.LowIn52) / diffHigh;
+                    item.VTI = Math.Round( 1 - (item.Price - item.LowIn52) / diffHigh, 2);
                     item.Amount = Convert.ToInt32(Math.Round(item.VTI, 2) * 1000);
                 }
                 catch (Exception ex)
@@ -227,25 +227,67 @@ namespace StockBuyingHelper.Service.Implements
                         var context = BrowsingContext.New(config);
                         var document = await context.OpenAsync(res => res.Content(sr));
 
-                        var listTR = document.QuerySelectorAll("#main-3-QuoteFinanceEps-Proxy .table-body-wrapper li");
+                        var listTR = document.QuerySelectorAll("#main-3-QuoteFinanceEps-Proxy .table-body-wrapper li").Take(4);//只取最近4季的EPS
                         var epsInfo = new EpsInfo() { StockId = item.StockId, StockName = item.StockName };
-                        var sn = 1;
                         foreach (var tr in listTR)
                         {
-                            if (sn <= 4)
-                            {//只取最近4季的EPS
-                                epsInfo.EPS += Convert.ToDecimal(tr.QuerySelector("span").InnerHtml);
-                                sn++;
-                            }
-                            else
-                            {
-                                break;
-                            }
+                            epsInfo.EPS += Convert.ToDecimal(tr.QuerySelector("span").InnerHtml);
                         }
 
                         var reEPS = epsInfo.EPS == 0.0M ? 0.01M : epsInfo.EPS;
                         epsInfo.PE = Convert.ToDouble( Math.Round(item.Price / reEPS, 2) );
                         res.Add(epsInfo);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                var errMsg = ex.Message;
+            }
+
+            return res;
+        }
+
+        /// <summary>
+        /// 每月營收
+        /// </summary>
+        /// <param name="data"></param>
+        /// <returns></returns>
+        public async Task<List<RevenueInfo>> GetRevenue(List<VtiInfo> data)
+        {
+            var res = new List<RevenueInfo>();
+
+            try
+            {
+                var httpClient = new HttpClient();
+
+                foreach (var item in data)
+                {
+                    var url = $"https://tw.stock.yahoo.com/quote/{item.StockId}.TW/revenue"; //營收
+                    var resMessage = await httpClient.GetAsync(url);
+
+                    //檢查回應的伺服器狀態StatusCode是否是200 OK
+                    if (resMessage.StatusCode == System.Net.HttpStatusCode.OK)
+                    {
+                        var sr = await resMessage.Content.ReadAsStringAsync();
+                        var config = Configuration.Default;
+                        var context = BrowsingContext.New(config);
+                        var document = await context.OpenAsync(res => res.Content(sr));
+
+                        var listTR = document.QuerySelectorAll("#qsp-revenue-table .table-body-wrapper ul li[class*='List']").Take(4);
+                        var revenueInfo = new RevenueInfo() { StockId = item.StockId, StockName = item.StockName, RevenueData = new List<Revenue>() };
+                        foreach (var tr in listTR)
+                        {
+                            revenueInfo.RevenueData.Add(new Revenue()
+                            {
+                                YearMonth = tr.QuerySelector("div").Children[0].TextContent,//YYYY/MM
+                                MOM = Convert.ToDouble(tr.QuerySelectorAll("span")[1].TextContent.Replace("%", "")),//MOM 
+                                YOY = Convert.ToDouble(tr.QuerySelectorAll("span")[3].TextContent.Replace("%", "")),//YOY
+                                YoyGrandTotal = Convert.ToDouble(tr.QuerySelectorAll("span")[6].TextContent.Replace("%", ""))
+                            });
+                        }
+
+                        res.Add(revenueInfo);
                     }
                 }
             }
