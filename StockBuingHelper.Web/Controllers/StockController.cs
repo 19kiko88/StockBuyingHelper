@@ -38,6 +38,7 @@ namespace StockBuingHelper.Web.Controllers
                      a.LowIn52,
                      listEps.Where(c => c.StockId == a.StockId).FirstOrDefault()?.EPS,
                      listEps.Where(c => c.StockId == a.StockId).FirstOrDefault()?.PE,
+                     listRevenue.Where(c => c.StockId == a.StockId).FirstOrDefault()?.RevenueData.FirstOrDefault()?.YearMonth,
                      listRevenue.Where(c => c.StockId == a.StockId).FirstOrDefault()?.RevenueData.FirstOrDefault()?.MOM,
                      listRevenue.Where(c => c.StockId == a.StockId).FirstOrDefault()?.RevenueData.FirstOrDefault()?.YOY,
                      listRevenue.Where(c => c.StockId == a.StockId).FirstOrDefault()?.RevenueData.FirstOrDefault()?.YoyGrandTotal,
