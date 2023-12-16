@@ -23,7 +23,7 @@ namespace StockBuingHelper.Web.Controllers
             //var listStockInfo = await _stockService.GetStockList();
             var listPrice = await _stockService.GetPrice();
             var listHighLow = await _stockService.GetHighLowIn52Weeks();
-            var listVti = await _stockService.GetVTI(listPrice, listHighLow, 700);
+            var listVti = await _stockService.GetVTI(listPrice, listHighLow, 800);
             var listEps = await _stockService.GetEPS(listVti);
 
             var qq =
