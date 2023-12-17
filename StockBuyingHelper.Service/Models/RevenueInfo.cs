@@ -15,9 +15,9 @@ namespace StockBuyingHelper.Service.Models
 
     public class Revenue
     {
-        public string YearMonth { get; set; }
+        public string RevenueInterval { get; set; }
         public double MOM { get; set; }
         public double YOY { get; set; }
-        public double YoyGrandTotal { get; set; }
+        //public double YoyGrandTotal { get; set; }
     }
 }

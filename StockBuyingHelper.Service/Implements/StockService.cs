@@ -180,21 +180,14 @@ namespace StockBuyingHelper.Service.Implements
 
             foreach (var item in listVTI)
             {
-                try
-                {
-                    var diffHigh = (item.HighIn52 - item.LowIn52) == 0M ? 0.01M : (item.HighIn52 - item.LowIn52);
+                var diffHigh = (item.HighIn52 - item.LowIn52) == 0M ? 0.01M : (item.HighIn52 - item.LowIn52);
 
-                    /*
-                     *Ref：https://www.facebook.com/1045010642367425/posts/1076024329266056/
-                     *在近52周最高最低價格區間內，目前價格離最高價還有多少百分比(vti越高，表示離52周區間內最高點越近)
-                     */
-                    item.VTI = Math.Round( 1 - (item.Price - item.LowIn52) / diffHigh, 2);
-                    item.Amount = Convert.ToInt32(Math.Round(item.VTI, 2) * 1000);
-                }
-                catch (Exception ex)
-                {
-                    var msg = ex.Message;
-                }
+                /*
+                 *Ref：https://www.facebook.com/1045010642367425/posts/1076024329266056/
+                 *在近52周最高最低價格區間內，目前價格離最高價還有多少百分比(vti越高，表示離52周區間內最高點越近)
+                 */
+                item.VTI = Math.Round( 1 - (item.Price - item.LowIn52) / diffHigh, 2);
+                item.Amount = Convert.ToInt32(Math.Round(item.VTI, 2) * 1000);
             }
 
             if (amountLimit > 0)
@@ -208,41 +201,48 @@ namespace StockBuyingHelper.Service.Implements
         public async Task<List<EpsInfo>> GetEPS(List<VtiInfo> data)
         {
             var res = new List<EpsInfo>();
+            var httpClient = new HttpClient();
 
-            try
+            foreach (var item in data) 
             {
-                var httpClient = new HttpClient();
+                var url = $"https://tw.stock.yahoo.com/quote/{item.StockId}.TW/eps";//eps
+                //var url_revenue = https://tw.stock.yahoo.com/quote/2317.TW/revenue; //營收
+                var resMessage = await httpClient.GetAsync(url);
 
-                foreach (var item in data) 
+                //檢查回應的伺服器狀態StatusCode是否是200 OK
+                if (resMessage.StatusCode == System.Net.HttpStatusCode.OK)
                 {
-                    var url = $"https://tw.stock.yahoo.com/quote/{item.StockId}.TW/eps";//eps
-                    //var url_revenue = https://tw.stock.yahoo.com/quote/2317.TW/revenue; //營收
-                    var resMessage = await httpClient.GetAsync(url);
+                    var sr = await resMessage.Content.ReadAsStringAsync();
+                    var config = Configuration.Default;
+                    var context = BrowsingContext.New(config);
+                    var document = await context.OpenAsync(res => res.Content(sr));
 
-                    //檢查回應的伺服器狀態StatusCode是否是200 OK
-                    if (resMessage.StatusCode == System.Net.HttpStatusCode.OK)
-                    {
-                        var sr = await resMessage.Content.ReadAsStringAsync();
-                        var config = Configuration.Default;
-                        var context = BrowsingContext.New(config);
-                        var document = await context.OpenAsync(res => res.Content(sr));
+                    var listTR = document.QuerySelectorAll("#qsp-eps-table .table-body-wrapper  ul li[class*='List']").Take(4);//只取最近4季的EPS
+                    var epsInfo = new EpsInfo() { StockId = item.StockId, StockName = item.StockName, EpsData = new List<Eps>() };
+                    foreach (var tr in listTR)
+                    {                            
+                        var eps = Convert.ToDecimal(tr.QuerySelector("span").InnerHtml);
 
-                        var listTR = document.QuerySelectorAll("#main-3-QuoteFinanceEps-Proxy .table-body-wrapper li").Take(4);//只取最近4季的EPS
-                        var epsInfo = new EpsInfo() { StockId = item.StockId, StockName = item.StockName };
-                        foreach (var tr in listTR)
+                        epsInfo.EpsData.Add(new Eps
                         {
-                            epsInfo.EPS += Convert.ToDecimal(tr.QuerySelector("span").InnerHtml);
-                        }
-
-                        var reEPS = epsInfo.EPS == 0.0M ? 0.01M : epsInfo.EPS;
-                        epsInfo.PE = Convert.ToDouble( Math.Round(item.Price / reEPS, 2) );
-                        res.Add(epsInfo);
+                            Quarter = tr.QuerySelector("div").Children[0].TextContent,
+                            EPS = eps
+                        });
                     }
+                    var epsSum = epsInfo.EpsData.Select(c => c.EPS).Sum();
+                    epsInfo.EpsInterval = $"{epsInfo.EpsData.LastOrDefault()?.Quarter} ~ {epsInfo.EpsData.FirstOrDefault()?.Quarter}";
+
+                    try
+                    {
+                        epsInfo.PE = Convert.ToDouble(Math.Round(item.Price / epsSum, 2));
+                    }
+                    catch (Exception ex)
+                    {
+                        var msg = ex.Message;                            
+                    }
+                    
+                    res.Add(epsInfo);
                 }
-            }
-            catch (Exception ex)
-            {
-                var errMsg = ex.Message;
             }
 
             return res;
@@ -256,44 +256,35 @@ namespace StockBuyingHelper.Service.Implements
         public async Task<List<RevenueInfo>> GetRevenue(List<VtiInfo> data)
         {
             var res = new List<RevenueInfo>();
+            var httpClient = new HttpClient();
 
-            try
+            foreach (var item in data)
             {
-                var httpClient = new HttpClient();
+                var url = $"https://tw.stock.yahoo.com/quote/{item.StockId}.TW/revenue"; //營收
+                var resMessage = await httpClient.GetAsync(url);
 
-                foreach (var item in data)
+                //檢查回應的伺服器狀態StatusCode是否是200 OK
+                if (resMessage.StatusCode == System.Net.HttpStatusCode.OK)
                 {
-                    var url = $"https://tw.stock.yahoo.com/quote/{item.StockId}.TW/revenue"; //營收
-                    var resMessage = await httpClient.GetAsync(url);
+                    var sr = await resMessage.Content.ReadAsStringAsync();
+                    var config = Configuration.Default;
+                    var context = BrowsingContext.New(config);
+                    var document = await context.OpenAsync(res => res.Content(sr));
 
-                    //檢查回應的伺服器狀態StatusCode是否是200 OK
-                    if (resMessage.StatusCode == System.Net.HttpStatusCode.OK)
+                    var listTR = document.QuerySelectorAll("#qsp-revenue-table .table-body-wrapper ul li[class*='List']").Take(4);
+                    var revenueInfo = new RevenueInfo() { StockId = item.StockId, StockName = item.StockName, RevenueData = new List<Revenue>() };
+                    foreach (var tr in listTR)
                     {
-                        var sr = await resMessage.Content.ReadAsStringAsync();
-                        var config = Configuration.Default;
-                        var context = BrowsingContext.New(config);
-                        var document = await context.OpenAsync(res => res.Content(sr));
-
-                        var listTR = document.QuerySelectorAll("#qsp-revenue-table .table-body-wrapper ul li[class*='List']").Take(4);
-                        var revenueInfo = new RevenueInfo() { StockId = item.StockId, StockName = item.StockName, RevenueData = new List<Revenue>() };
-                        foreach (var tr in listTR)
+                        revenueInfo.RevenueData.Add(new Revenue()
                         {
-                            revenueInfo.RevenueData.Add(new Revenue()
-                            {
-                                YearMonth = tr.QuerySelector("div").Children[0].TextContent,//YYYY/MM
-                                MOM = Convert.ToDouble(tr.QuerySelectorAll("span")[1].TextContent.Replace("%", "")),//MOM 
-                                YOY = Convert.ToDouble(tr.QuerySelectorAll("span")[3].TextContent.Replace("%", "")),//YOY
-                                YoyGrandTotal = Convert.ToDouble(tr.QuerySelectorAll("span")[6].TextContent.Replace("%", ""))
-                            });
-                        }
-
-                        res.Add(revenueInfo);
+                            RevenueInterval = tr.QuerySelector("div").Children[0].TextContent,//YYYY/MM
+                            MOM = Convert.ToDouble(tr.QuerySelectorAll("span")[1].TextContent.Replace("%", "")),//MOM 
+                            YOY = Convert.ToDouble(tr.QuerySelectorAll("span")[6].TextContent.Replace("%", ""))//YOY
+                        });
                     }
+
+                    res.Add(revenueInfo);
                 }
-            }
-            catch (Exception ex)
-            {
-                var errMsg = ex.Message;
             }
 
             return res;
