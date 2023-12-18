@@ -11,6 +11,8 @@ namespace StockBuyingHelper.Service.Implements
 {
     public class StockService: IStockService
     {
+        private readonly object _lock = new object();
+
         public async Task<List<StockInfoModel>> GetStockList()
         {
             var res = new List<StockInfoModel>();
@@ -206,14 +208,14 @@ namespace StockBuyingHelper.Service.Implements
         /// </summary>
         /// <param name="data"></param>
         /// <returns></returns>
-        public async Task<List<EpsInfoModel>> GetEPS(List<StockPriceModel> data)
+        public async Task<List<EpsInfoModel>> GetEPS(List<VtiInfoModel> data)
         {
             var res = new List<EpsInfoModel>();
             var httpClient = new HttpClient();
             var idx = 0;
             var taskCount = 20;
             var tasks = new Task[taskCount];
-            var vtiGroup = new List<StockPriceModel>[taskCount];
+            var vtiGroup = new List<VtiInfoModel>[taskCount];
 
             foreach (var item in data)
             {
@@ -222,7 +224,7 @@ namespace StockBuyingHelper.Service.Implements
                 var groupNo = idx % taskCount;
                 if (vtiGroup[groupNo] == null)
                 {
-                    vtiGroup[groupNo] = new List<StockPriceModel>();
+                    vtiGroup[groupNo] = new List<VtiInfoModel>();
                 }
                 vtiGroup[groupNo].Add(item);
             }
@@ -279,14 +281,19 @@ namespace StockBuyingHelper.Service.Implements
             return res;
         }
 
-        public async Task<List<PeInfoModel>> GetPE(List<StockPriceModel> data)
+        /// <summary>
+        /// 本益比(PE) & 近四季EPS
+        /// </summary>
+        /// <param name="data"></param>
+        /// <returns></returns>
+        public async Task<List<PeInfoModel>> GetPE(List<VtiInfoModel> data)
         {
             var res = new List<PeInfoModel>();
             var httpClient = new HttpClient();
             var idx = 0;
-            var taskCount = 25;
+            var taskCount = 20;
             var tasks = new Task[taskCount];
-            var vtiGroup = new List<StockPriceModel>[taskCount];
+            var vtiGroup = new List<VtiInfoModel>[taskCount];
 
             foreach (var item in data)
             {
@@ -295,7 +302,7 @@ namespace StockBuyingHelper.Service.Implements
                 var groupNo = idx % taskCount;
                 if (vtiGroup[groupNo] == null)
                 {
-                    vtiGroup[groupNo] = new List<StockPriceModel>();
+                    vtiGroup[groupNo] = new List<VtiInfoModel>();
                 }
                 vtiGroup[groupNo].Add(item);
             }
@@ -307,31 +314,31 @@ namespace StockBuyingHelper.Service.Implements
                 {
                     foreach (var item in vtiData)
                     {
+                        var url = @$"https://tw.stock.yahoo.com/_td-stock/api/resource/StockServices.revenues;includedFields=priceAssessment;period=quarterSum4;priceAssessmentPeriod=quarter;symbol={item.StockId}.TW?bkt=&device=desktop&ecma=modern&feature=enableGAMAds%2CenableGAMEdgeToEdge%2CenableEvPlayer&intl=tw&lang=zh-Hant-TW&partner=none&prid=7ojmd05invvv9&region=TW&site=finance&tz=Asia%2FTaipei&ver=1.2.2103&returnMeta=true";
+                        var resMessage = await httpClient.GetAsync(url);
 
-                            var url = @$"https://tw.stock.yahoo.com/_td-stock/api/resource/StockServices.revenues;includedFields=priceAssessment;period=quarterSum4;priceAssessmentPeriod=quarter;symbol={item.StockId}.TW?bkt=&device=desktop&ecma=modern&feature=enableGAMAds%2CenableGAMEdgeToEdge%2CenableEvPlayer&intl=tw&lang=zh-Hant-TW&partner=none&prid=7ojmd05invvv9&region=TW&site=finance&tz=Asia%2FTaipei&ver=1.2.2103&returnMeta=true";
-                            var resMessage = await httpClient.GetAsync(url);
+                        //檢查回應的伺服器狀態StatusCode是否是200 OK
+                        if (resMessage.StatusCode == System.Net.HttpStatusCode.OK)
+                        {
+                            var sr = await resMessage.Content.ReadAsStringAsync();
+                            var deserializeData = JsonSerializer.Deserialize<EpsInfo2Model>(sr);
 
-                            //檢查回應的伺服器狀態StatusCode是否是200 OK
-                            if (resMessage.StatusCode == System.Net.HttpStatusCode.OK)
+                            var epsAcc4Q = deserializeData.data.data.result.revenues.Count > 0 ? Convert.ToDecimal(deserializeData.data.data.result.revenues[0].epsAcc4Q ?? "0.01") : 0.01M;
+                            var interval = deserializeData.data.data.result.revenues.Count > 0 ? deserializeData.data.data.result.revenues[0].date.ToString("yyyy/MM") ?? "" : "";
+
+                            var peInfo = new PeInfoModel() {
+                                StockId = item.StockId, 
+                                StockName = item.StockName, 
+                                EpsAcc4QInterval = interval,
+                                EpsAcc4Q = epsAcc4Q,
+                                PE = Convert.ToDouble(Math.Round(item.Price / epsAcc4Q, 2))
+                            };
+
+                            lock (_lock)
                             {
-                                var sr = await resMessage.Content.ReadAsStringAsync();
-                                var deserializeData = JsonSerializer.Deserialize<EpsInfo2Model>(sr);
-
-                                var epsAcc4Q = deserializeData.data.data.result.revenues.Count > 0 ? Convert.ToDecimal(deserializeData.data.data.result.revenues[0].epsAcc4Q ?? "0.01") : 0.01M;
-                                var interval = deserializeData.data.data.result.revenues.Count > 0 ? deserializeData.data.data.result.revenues[0].date.ToString("yyyy/MM") ?? "" : "";
-
-                                var peInfo = new PeInfoModel() {
-                                    StockId = item.StockId, 
-                                    StockName = item.StockName, 
-                                    EpsAcc4QInterval = interval,
-                                    EpsAcc4Q = epsAcc4Q,
-                                    PE = Convert.ToDouble(Math.Round(item.Price / epsAcc4Q, 2))
-                                };
-
                                 res.Add(peInfo);
                             }
-
-
+                        }
                     }
                 });
             }
@@ -345,14 +352,14 @@ namespace StockBuyingHelper.Service.Implements
         /// </summary>
         /// <param name="data"></param>
         /// <returns></returns>
-        public async Task<List<RevenueInfoModel>> GetRevenue(List<StockPriceModel> data)
+        public async Task<List<RevenueInfoModel>> GetRevenue(List<VtiInfoModel> data)
         {
             var res = new List<RevenueInfoModel>();
             var httpClient = new HttpClient();
             var idx = 0;
-            var taskCount = 25;
+            var taskCount = 20;
             var tasks = new Task[taskCount];
-            var vtiGroup = new List<StockPriceModel>[taskCount];
+            var vtiGroup = new List<VtiInfoModel>[taskCount];
 
             foreach (var item in data)
             {
@@ -361,7 +368,7 @@ namespace StockBuyingHelper.Service.Implements
                 var groupNo = idx % taskCount;
                 if (vtiGroup[groupNo] == null)
                 {
-                    vtiGroup[groupNo] = new List<StockPriceModel>();
+                    vtiGroup[groupNo] = new List<VtiInfoModel>();
                 }
                 vtiGroup[groupNo].Add(item);
             }
@@ -396,7 +403,10 @@ namespace StockBuyingHelper.Service.Implements
                                 });
                             }
 
-                            res.Add(revenueInfo);
+                            lock (_lock) 
+                            {
+                                res.Add(revenueInfo);
+                            }                            
                         }
                     }
                 });
