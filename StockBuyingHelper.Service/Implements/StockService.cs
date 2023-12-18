@@ -283,6 +283,7 @@ namespace StockBuyingHelper.Service.Implements
 
         /// <summary>
         /// 本益比(PE) & 近四季EPS
+        /// 本益比驗證：https://www.cmoney.tw/forum/stock/1256
         /// </summary>
         /// <param name="data"></param>
         /// <returns></returns>
