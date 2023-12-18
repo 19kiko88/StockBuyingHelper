@@ -1,7 +1,9 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 
 using StockBuyingHelper.Service;
+using StockBuyingHelper.Service.Dtos;
 using StockBuyingHelper.Service.Interfaces;
+using StockBuyingHelper.Service.Models;
 
 namespace StockBuingHelper.Web.Controllers
 {
@@ -18,55 +20,60 @@ namespace StockBuingHelper.Web.Controllers
         }
 
         [HttpGet]
-        public async Task<string> GetVtiData()
+        public async Task<List<BuyingResultDto>> GetVtiData()
         {
+            var res = new List<BuyingResultDto>();
             try
             {
-                //var listStockInfo = await _stockService.GetStockList();
                 var listPrice = await _stockService.GetPrice();
                 var listHighLow = await _stockService.GetHighLowIn52Weeks();
                 var listVti = await _stockService.GetVTI(listPrice, listHighLow, 800);
-                var listEps = await _stockService.GetEPS(listVti);
-                var listRevenue = await _stockService.GetRevenue(listVti);
 
-                var QQQ =
-                    (from a in listVti
-                     select new
-                     {
-                         a.StockId,
-                         a.StockName,
-                         a.Price,
-                         a.HighIn52,
-                         a.LowIn52,
-                         EpsInterval = listEps.Where(c => c.StockId == a.StockId).FirstOrDefault()?.EpsInterval ?? "",
-                         EPS = listEps.Where(c => c.StockId == a.StockId).FirstOrDefault()?.EpsData?.Sum(s => s.EPS) ?? 0,
-                         PE = listEps.Where(c => c.StockId == a.StockId).FirstOrDefault()?.PE ?? 0,
-                         RevenueInterval_1 = listRevenue.Where(c => c.StockId == a.StockId).FirstOrDefault()?.RevenueData.Count > 0 ? listRevenue.Where(c => c.StockId == a.StockId).FirstOrDefault()?.RevenueData[0]?.RevenueInterval : "",
-                         MOM_1 = listRevenue.Where(c => c.StockId == a.StockId).FirstOrDefault()?.RevenueData.Count > 0 ? listRevenue.Where(c => c.StockId == a.StockId).FirstOrDefault()?.RevenueData[0].MOM : 0,
-                         YOY_1 = listRevenue.Where(c => c.StockId == a.StockId).FirstOrDefault()?.RevenueData.Count > 0 ? listRevenue.Where(c => c.StockId == a.StockId).FirstOrDefault()?.RevenueData[0].YOY : 0,
-                         RevenueInterval_2 = listRevenue.Where(c => c.StockId == a.StockId).FirstOrDefault()?.RevenueData.Count > 0 ? listRevenue.Where(c => c.StockId == a.StockId).FirstOrDefault()?.RevenueData[1]?.RevenueInterval : "",
-                         MOM_2 = listRevenue.Where(c => c.StockId == a.StockId).FirstOrDefault()?.RevenueData.Count > 0 ? listRevenue.Where(c => c.StockId == a.StockId).FirstOrDefault()?.RevenueData[1].MOM : 0,
-                         YOY_2 = listRevenue.Where(c => c.StockId == a.StockId).FirstOrDefault()?.RevenueData.Count > 0 ? listRevenue.Where(c => c.StockId == a.StockId).FirstOrDefault()?.RevenueData[1].YOY : 0,
-                         RevenueInterval_3 = listRevenue.Where(c => c.StockId == a.StockId).FirstOrDefault()?.RevenueData.Count > 0 ? listRevenue.Where(c => c.StockId == a.StockId).FirstOrDefault()?.RevenueData[2]?.RevenueInterval : "",
-                         MOM_3 = listRevenue.Where(c => c.StockId == a.StockId).FirstOrDefault()?.RevenueData.Count > 0 ? listRevenue.Where(c => c.StockId == a.StockId).FirstOrDefault()?.RevenueData[2].MOM : 0,
-                         YOY_3 = listRevenue.Where(c => c.StockId == a.StockId).FirstOrDefault()?.RevenueData.Count > 0 ? listRevenue.Where(c => c.StockId == a.StockId).FirstOrDefault()?.RevenueData[2].YOY : 0,
-                         a.VTI,
-                         a.Amount
-                     })
-                .ToList()
-                .Where(c =>
-                    c.EPS > 0
-                    && c.PE < 30
-                    && (c.MOM_1 > 0 || c.YOY_1 > 0)
-                )
-                .OrderByDescending(o => o.EPS);
+                if (listVti != null && listVti.Count > 0)
+                {
+                    var filterData = listVti.Select(c => new StockPriceModel()
+                    {
+                        StockId = c.StockId,
+                        StockName = c.StockName,
+                        Price = c.Price
+                    }).ToList();
+
+                    //var listEps = await _stockService.GetEPS(filterData);
+                    var listPe = await _stockService.GetPE(filterData);
+                    var listRevenue = await _stockService.GetRevenue(filterData);
+
+                    res =
+                    _stockService.GetBuyingResult(listVti, listPe, listRevenue).Result
+                    .Select(c => new BuyingResultDto
+                    {
+                        StockId = c.StockId,
+                        StockName = c.StockName,
+                        Price = c.Price,
+                        HighIn52 = c.HighIn52,
+                        LowIn52 = c.LowIn52,
+                        EpsInterval = c.EpsInterval,
+                        EPS = c.EPS,
+                        PE = c.PE,
+                        RevenueInterval_1 = c.RevenueInterval_1,
+                        MOM_1 = c.MOM_1,
+                        YOY_1 = c.YOY_1,
+                        RevenueInterval_2 = c.RevenueInterval_2,
+                        MOM_2 = c.MOM_2,
+                        YOY_2 = c.YOY_2,
+                        RevenueInterval_3 = c.RevenueInterval_3,
+                        MOM_3 = c.MOM_3,
+                        YOY_3 = c.YOY_3,
+                        VTI = c.VTI,
+                        Amount = c.Amount
+                    }).ToList();
+                }
             }
             catch (Exception ex)
             {
                 var msg = ex.Message;
             }   
 
-            return "";
+            return res;
         }
     }
 }

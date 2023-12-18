@@ -3,14 +3,17 @@ using AngleSharp.Dom;
 using StockBuyingHelper.Service.Interfaces;
 using StockBuyingHelper.Service.Models;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using System.Threading.Tasks;
 
 namespace StockBuyingHelper.Service.Implements
 {
     public class StockService: IStockService
     {
-        public async Task<List<StockInfo>> GetStockList()
+        public async Task<List<StockInfoModel>> GetStockList()
         {
-            var res = new List<StockInfo>();
+            var res = new List<StockInfoModel>();
             var httpClient = new HttpClient();
             var url = "https://isin.twse.com.tw/isin/C_public.jsp?strMode=2";
             var resMessage = await httpClient.GetAsync(url);
@@ -32,7 +35,7 @@ namespace StockBuyingHelper.Service.Implements
                         var arrayTd = tr.Children.ToArray();
                         if (tr.Children.Length >= 7)
                         {
-                            res.Add(new StockInfo()
+                            res.Add(new StockInfoModel()
                             {
                                 StockId = arrayTd[0].TextContent.Split('　')[0],
                                 StockName = arrayTd[0].TextContent.Split('　').Length == 2 ? arrayTd[0].TextContent.Split('　')[1] : "",
@@ -52,9 +55,9 @@ namespace StockBuyingHelper.Service.Implements
             return res;
         }
 
-        public async Task<List<GetHighLowIn52WeeksInfo>> GetHighLowIn52Weeks()
+        public async Task<List<GetHighLowIn52WeeksInfoModel>> GetHighLowIn52Weeks()
         {
-            var res = new List<GetHighLowIn52WeeksInfo>();
+            var res = new List<GetHighLowIn52WeeksInfoModel>();
             var httpClient = new HttpClient();
             //add header [User-Agent]，避免被檢查出爬蟲
             httpClient.DefaultRequestHeaders.Add("User-Agent", @"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36");
@@ -73,14 +76,14 @@ namespace StockBuyingHelper.Service.Implements
 
 
                 var listTR = document.QuerySelectorAll("tr[id^=row]");
-                var datas = new List<GetHighLowIn52WeeksInfo>();                   
+                var datas = new List<GetHighLowIn52WeeksInfoModel>();                   
                 
                 foreach (var tr in listTR)
                 {
                     var Tds = tr.Children;
                     try
                     {
-                        datas.Add(new GetHighLowIn52WeeksInfo()
+                        datas.Add(new GetHighLowIn52WeeksInfoModel()
                         {
                             StockId = Tds[0].TextContent.Trim(),
                             StockName = Tds[1].TextContent.Trim(),
@@ -117,9 +120,9 @@ namespace StockBuyingHelper.Service.Implements
             return res;
         }
 
-        public async Task<List<StockPrice>> GetPrice()
+        public async Task<List<StockPriceModel>> GetPrice()
         {
-            var res = new List<StockPrice>();
+            var res = new List<StockPriceModel>();
 
             try
             {
@@ -147,7 +150,7 @@ namespace StockBuyingHelper.Service.Implements
                             continue;
                         }
 
-                        res.Add(new StockPrice()
+                        res.Add(new StockPriceModel()
                         {
                             StockId = tr.Children[0].InnerHtml,
                             StockName = tr.Children[1].Children[0].InnerHtml,
@@ -165,12 +168,12 @@ namespace StockBuyingHelper.Service.Implements
             return res;
         }
 
-        public async Task<List<VtiInfo>> GetVTI(List<StockPrice> priceData, List<GetHighLowIn52WeeksInfo> highLowData, int amountLimit = 0)
+        public async Task<List<VtiInfoModel>> GetVTI(List<StockPriceModel> priceData, List<GetHighLowIn52WeeksInfoModel> highLowData, int amountLimit = 0)
         {
             var listVTI =
                 (from a in priceData
                 join b in highLowData on a.StockId equals b.StockId
-                select new VtiInfo {
+                select new VtiInfoModel {
                     StockId = a.StockId,
                     StockName = a.StockName,
                     Price = a.Price,
@@ -186,7 +189,7 @@ namespace StockBuyingHelper.Service.Implements
                  *Ref：https://www.facebook.com/1045010642367425/posts/1076024329266056/
                  *在近52周最高最低價格區間內，目前價格離最高價還有多少百分比(vti越高，表示離52周區間內最高點越近)
                  */
-                item.VTI = Math.Round( 1 - (item.Price - item.LowIn52) / diffHigh, 2);
+                item.VTI = Convert.ToDouble(Math.Round( 1 - (item.Price - item.LowIn52) / diffHigh, 2));
                 item.Amount = Convert.ToInt32(Math.Round(item.VTI, 2) * 1000);
             }
 
@@ -198,52 +201,141 @@ namespace StockBuyingHelper.Service.Implements
             return listVTI;
         }   
         
-        public async Task<List<EpsInfo>> GetEPS(List<VtiInfo> data)
+        /// <summary>
+        /// EPS
+        /// </summary>
+        /// <param name="data"></param>
+        /// <returns></returns>
+        public async Task<List<EpsInfoModel>> GetEPS(List<StockPriceModel> data)
         {
-            var res = new List<EpsInfo>();
+            var res = new List<EpsInfoModel>();
             var httpClient = new HttpClient();
+            var idx = 0;
+            var taskCount = 20;
+            var tasks = new Task[taskCount];
+            var vtiGroup = new List<StockPriceModel>[taskCount];
 
-            foreach (var item in data) 
+            foreach (var item in data)
             {
-                var url = $"https://tw.stock.yahoo.com/quote/{item.StockId}.TW/eps";//eps
-                //var url_revenue = https://tw.stock.yahoo.com/quote/2317.TW/revenue; //營收
-                var resMessage = await httpClient.GetAsync(url);
+                idx++;
 
-                //檢查回應的伺服器狀態StatusCode是否是200 OK
-                if (resMessage.StatusCode == System.Net.HttpStatusCode.OK)
+                var groupNo = idx % taskCount;
+                if (vtiGroup[groupNo] == null)
                 {
-                    var sr = await resMessage.Content.ReadAsStringAsync();
-                    var config = Configuration.Default;
-                    var context = BrowsingContext.New(config);
-                    var document = await context.OpenAsync(res => res.Content(sr));
-
-                    var listTR = document.QuerySelectorAll("#qsp-eps-table .table-body-wrapper  ul li[class*='List']").Take(4);//只取最近4季的EPS
-                    var epsInfo = new EpsInfo() { StockId = item.StockId, StockName = item.StockName, EpsData = new List<Eps>() };
-                    foreach (var tr in listTR)
-                    {                            
-                        var eps = Convert.ToDecimal(tr.QuerySelector("span").InnerHtml);
-
-                        epsInfo.EpsData.Add(new Eps
-                        {
-                            Quarter = tr.QuerySelector("div").Children[0].TextContent,
-                            EPS = eps
-                        });
-                    }
-                    var epsSum = epsInfo.EpsData.Select(c => c.EPS).Sum();
-                    epsInfo.EpsInterval = $"{epsInfo.EpsData.LastOrDefault()?.Quarter} ~ {epsInfo.EpsData.FirstOrDefault()?.Quarter}";
-
-                    try
-                    {
-                        epsInfo.PE = Convert.ToDouble(Math.Round(item.Price / epsSum, 2));
-                    }
-                    catch (Exception ex)
-                    {
-                        var msg = ex.Message;                            
-                    }
-                    
-                    res.Add(epsInfo);
+                    vtiGroup[groupNo] = new List<StockPriceModel>();
                 }
+                vtiGroup[groupNo].Add(item);
             }
+
+            for (int i = 0; i < tasks.Length; i++)
+            {
+                var vtiData = vtiGroup[i];
+                tasks[i] = Task.Run(async () =>
+                {
+                    foreach (var item in vtiData)
+                    {
+                        var url = $"https://tw.stock.yahoo.com/quote/{item.StockId}.TW/eps";//eps
+                        var resMessage = await httpClient.GetAsync(url);
+
+                        //檢查回應的伺服器狀態StatusCode是否是200 OK
+                        if (resMessage.StatusCode == System.Net.HttpStatusCode.OK)
+                        {
+                            var sr = await resMessage.Content.ReadAsStringAsync();
+                            var config = Configuration.Default;
+                            var context = BrowsingContext.New(config);
+                            var document = await context.OpenAsync(res => res.Content(sr));
+
+                            var listTR = document.QuerySelectorAll("#qsp-eps-table .table-body-wrapper  ul li[class*='List']").Take(4);//只取最近4季的EPS
+                            var epsInfo = new EpsInfoModel() { StockId = item.StockId, StockName = item.StockName, EpsData = new List<Eps>() };
+                            foreach (var tr in listTR)
+                            {
+                                var eps = Convert.ToDecimal(tr.QuerySelector("span").InnerHtml);
+
+                                epsInfo.EpsData.Add(new Eps
+                                {
+                                    Quarter = tr.QuerySelector("div").Children[0].TextContent,
+                                    EPS = eps
+                                });
+                            }
+                            var epsSum = epsInfo.EpsData.Select(c => c.EPS).Sum();
+                            epsInfo.EpsInterval = $"{epsInfo.EpsData.LastOrDefault()?.Quarter} ~ {epsInfo.EpsData.FirstOrDefault()?.Quarter}";
+
+                            try
+                            {
+                                epsInfo.PE = Convert.ToDouble(Math.Round(item.Price / epsSum, 2));
+                            }
+                            catch (Exception ex)
+                            {
+                                var msg = ex.Message;
+                            }
+
+                            res.Add(epsInfo);
+                        }
+                    }
+                });
+            }
+            Task.WaitAll(tasks);
+
+            return res;
+        }
+
+        public async Task<List<PeInfoModel>> GetPE(List<StockPriceModel> data)
+        {
+            var res = new List<PeInfoModel>();
+            var httpClient = new HttpClient();
+            var idx = 0;
+            var taskCount = 25;
+            var tasks = new Task[taskCount];
+            var vtiGroup = new List<StockPriceModel>[taskCount];
+
+            foreach (var item in data)
+            {
+                idx++;
+
+                var groupNo = idx % taskCount;
+                if (vtiGroup[groupNo] == null)
+                {
+                    vtiGroup[groupNo] = new List<StockPriceModel>();
+                }
+                vtiGroup[groupNo].Add(item);
+            }
+
+            for (int i = 0; i < tasks.Length; i++)
+            {
+                var vtiData = vtiGroup[i];
+                tasks[i] = Task.Run(async () =>
+                {
+                    foreach (var item in vtiData)
+                    {
+
+                            var url = @$"https://tw.stock.yahoo.com/_td-stock/api/resource/StockServices.revenues;includedFields=priceAssessment;period=quarterSum4;priceAssessmentPeriod=quarter;symbol={item.StockId}.TW?bkt=&device=desktop&ecma=modern&feature=enableGAMAds%2CenableGAMEdgeToEdge%2CenableEvPlayer&intl=tw&lang=zh-Hant-TW&partner=none&prid=7ojmd05invvv9&region=TW&site=finance&tz=Asia%2FTaipei&ver=1.2.2103&returnMeta=true";
+                            var resMessage = await httpClient.GetAsync(url);
+
+                            //檢查回應的伺服器狀態StatusCode是否是200 OK
+                            if (resMessage.StatusCode == System.Net.HttpStatusCode.OK)
+                            {
+                                var sr = await resMessage.Content.ReadAsStringAsync();
+                                var deserializeData = JsonSerializer.Deserialize<EpsInfo2Model>(sr);
+
+                                var epsAcc4Q = deserializeData.data.data.result.revenues.Count > 0 ? Convert.ToDecimal(deserializeData.data.data.result.revenues[0].epsAcc4Q ?? "0.01") : 0.01M;
+                                var interval = deserializeData.data.data.result.revenues.Count > 0 ? deserializeData.data.data.result.revenues[0].date.ToString("yyyy/MM") ?? "" : "";
+
+                                var peInfo = new PeInfoModel() {
+                                    StockId = item.StockId, 
+                                    StockName = item.StockName, 
+                                    EpsAcc4QInterval = interval,
+                                    EpsAcc4Q = epsAcc4Q,
+                                    PE = Convert.ToDouble(Math.Round(item.Price / epsAcc4Q, 2))
+                                };
+
+                                res.Add(peInfo);
+                            }
+
+
+                    }
+                });
+            }
+            Task.WaitAll(tasks);
 
             return res;
         }
@@ -253,41 +345,101 @@ namespace StockBuyingHelper.Service.Implements
         /// </summary>
         /// <param name="data"></param>
         /// <returns></returns>
-        public async Task<List<RevenueInfo>> GetRevenue(List<VtiInfo> data)
+        public async Task<List<RevenueInfoModel>> GetRevenue(List<StockPriceModel> data)
         {
-            var res = new List<RevenueInfo>();
+            var res = new List<RevenueInfoModel>();
             var httpClient = new HttpClient();
+            var idx = 0;
+            var taskCount = 25;
+            var tasks = new Task[taskCount];
+            var vtiGroup = new List<StockPriceModel>[taskCount];
 
             foreach (var item in data)
             {
-                var url = $"https://tw.stock.yahoo.com/quote/{item.StockId}.TW/revenue"; //營收
-                var resMessage = await httpClient.GetAsync(url);
+                idx++;
 
-                //檢查回應的伺服器狀態StatusCode是否是200 OK
-                if (resMessage.StatusCode == System.Net.HttpStatusCode.OK)
+                var groupNo = idx % taskCount;
+                if (vtiGroup[groupNo] == null)
                 {
-                    var sr = await resMessage.Content.ReadAsStringAsync();
-                    var config = Configuration.Default;
-                    var context = BrowsingContext.New(config);
-                    var document = await context.OpenAsync(res => res.Content(sr));
-
-                    var listTR = document.QuerySelectorAll("#qsp-revenue-table .table-body-wrapper ul li[class*='List']").Take(4);
-                    var revenueInfo = new RevenueInfo() { StockId = item.StockId, StockName = item.StockName, RevenueData = new List<Revenue>() };
-                    foreach (var tr in listTR)
-                    {
-                        revenueInfo.RevenueData.Add(new Revenue()
-                        {
-                            RevenueInterval = tr.QuerySelector("div").Children[0].TextContent,//YYYY/MM
-                            MOM = Convert.ToDouble(tr.QuerySelectorAll("span")[1].TextContent.Replace("%", "")),//MOM 
-                            YOY = Convert.ToDouble(tr.QuerySelectorAll("span")[6].TextContent.Replace("%", ""))//YOY
-                        });
-                    }
-
-                    res.Add(revenueInfo);
+                    vtiGroup[groupNo] = new List<StockPriceModel>();
                 }
+                vtiGroup[groupNo].Add(item);
             }
 
+            for (int i = 0; i < tasks.Length; i++)
+            {
+                var vtiData = vtiGroup[i];
+                tasks[i] = Task.Run(async () =>
+                {
+                    foreach (var item in vtiData)
+                    {
+                        var url = $"https://tw.stock.yahoo.com/quote/{item.StockId}.TW/revenue"; //營收
+                        var resMessage = await httpClient.GetAsync(url);
+
+                        //檢查回應的伺服器狀態StatusCode是否是200 OK
+                        if (resMessage.StatusCode == System.Net.HttpStatusCode.OK)
+                        {
+                            var sr = await resMessage.Content.ReadAsStringAsync();
+                            var config = Configuration.Default;
+                            var context = BrowsingContext.New(config);
+                            var document = await context.OpenAsync(res => res.Content(sr));
+
+                            var listTR = document.QuerySelectorAll("#qsp-revenue-table .table-body-wrapper ul li[class*='List']").Take(4);
+                            var revenueInfo = new RevenueInfoModel() { StockId = item.StockId, StockName = item.StockName, RevenueData = new List<Revenue>() };
+                            foreach (var tr in listTR)
+                            {
+                                revenueInfo.RevenueData.Add(new Revenue()
+                                {
+                                    RevenueInterval = tr.QuerySelector("div").Children[0].TextContent,//YYYY/MM
+                                    MOM = Convert.ToDouble(tr.QuerySelectorAll("span")[1].TextContent.Replace("%", "")),//MOM 
+                                    YOY = Convert.ToDouble(tr.QuerySelectorAll("span")[6].TextContent.Replace("%", ""))//YOY
+                                });
+                            }
+
+                            res.Add(revenueInfo);
+                        }
+                    }
+                });
+            }
+            Task.WaitAll(tasks);
+
             return res;
+        }
+
+        public async Task<List<BuyingResultModel>> GetBuyingResult(List<VtiInfoModel> vtiData, List<PeInfoModel> peData, List<RevenueInfoModel> revenueData)
+        {
+            var res =
+                (from a in vtiData
+                select new BuyingResultModel()
+                {
+                    StockId = a.StockId,
+                    StockName = a.StockName,
+                    Price = a.Price,
+                    HighIn52 = a.HighIn52,
+                    LowIn52 = a.LowIn52,
+                    EpsInterval = peData.Where(c => c.StockId == a.StockId).FirstOrDefault()?.EpsAcc4QInterval,
+                    EPS = peData.Where(c => c.StockId == a.StockId).FirstOrDefault().EpsAcc4Q,
+                    PE = peData.Where(c => c.StockId == a.StockId).FirstOrDefault()?.PE ?? 0,
+                    RevenueInterval_1 = revenueData.Where(c => c.StockId == a.StockId).FirstOrDefault()?.RevenueData.Count > 0 ? revenueData.Where(c => c.StockId == a.StockId).FirstOrDefault()?.RevenueData[0]?.RevenueInterval : "",
+                    MOM_1 = revenueData.Where(c => c.StockId == a.StockId).FirstOrDefault()?.RevenueData.Count > 0 ? revenueData.Where(c => c.StockId == a.StockId).FirstOrDefault()?.RevenueData[0].MOM : 0,
+                    YOY_1 = revenueData.Where(c => c.StockId == a.StockId).FirstOrDefault()?.RevenueData.Count > 0 ? revenueData.Where(c => c.StockId == a.StockId).FirstOrDefault()?.RevenueData[0].YOY : 0,
+                    RevenueInterval_2 = revenueData.Where(c => c.StockId == a.StockId).FirstOrDefault()?.RevenueData.Count > 0 ? revenueData.Where(c => c.StockId == a.StockId).FirstOrDefault()?.RevenueData[1]?.RevenueInterval : "",
+                    MOM_2 = revenueData.Where(c => c.StockId == a.StockId).FirstOrDefault()?.RevenueData.Count > 0 ? revenueData.Where(c => c.StockId == a.StockId).FirstOrDefault()?.RevenueData[1].MOM : 0,
+                    YOY_2 = revenueData.Where(c => c.StockId == a.StockId).FirstOrDefault()?.RevenueData.Count > 0 ? revenueData.Where(c => c.StockId == a.StockId).FirstOrDefault()?.RevenueData[1].YOY : 0,
+                    RevenueInterval_3 = revenueData.Where(c => c.StockId == a.StockId).FirstOrDefault()?.RevenueData.Count > 0 ? revenueData.Where(c => c.StockId == a.StockId).FirstOrDefault()?.RevenueData[2]?.RevenueInterval : "",
+                    MOM_3 = revenueData.Where(c => c.StockId == a.StockId).FirstOrDefault()?.RevenueData.Count > 0 ? revenueData.Where(c => c.StockId == a.StockId).FirstOrDefault()?.RevenueData[2].MOM : 0,
+                    YOY_3 = revenueData.Where(c => c.StockId == a.StockId).FirstOrDefault()?.RevenueData.Count > 0 ? revenueData.Where(c => c.StockId == a.StockId).FirstOrDefault()?.RevenueData[2].YOY : 0,
+                    VTI = a.VTI,
+                    Amount = a.Amount
+                })
+                .Where(c =>
+                    c.EPS > 0
+                    && c.PE < 30
+                    && (c.MOM_1 > 0 || c.YOY_1 > 0)
+                )
+                .OrderByDescending(o => o.EPS);                
+
+            return res.ToList();
         }
     }
 }

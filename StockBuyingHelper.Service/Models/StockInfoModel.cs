@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace StockBuyingHelper.Service.Models
 {
-    public class StockInfo
+    public class StockInfoModel
     {
         /// <summary>
         /// 代號

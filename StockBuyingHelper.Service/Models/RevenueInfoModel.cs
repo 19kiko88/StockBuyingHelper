@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace StockBuyingHelper.Service.Models
 {
-    public class RevenueInfo
+    public class RevenueInfoModel
     {
         public string StockId { get; set; }
         public string StockName { get; set; }

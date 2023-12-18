@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace StockBuyingHelper.Service.Models
 {
-    public class EpsInfo
+    public class EpsInfoModel
     {
         public string StockId { get; set; }
         public string StockName { get; set; }

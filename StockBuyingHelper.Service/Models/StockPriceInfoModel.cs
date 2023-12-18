@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace StockBuyingHelper.Service.Models
 {
-    public class StockPriceInfo
+    public class StockPriceInfoModel
     {
         public List<msgArray> msgArray { get; set; }
         public string referer { get; set; }
