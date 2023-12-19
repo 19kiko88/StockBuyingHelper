@@ -15,15 +15,22 @@ namespace StockBuyingHelper.Service.Utility
         /// <param name="data"></param>
         /// <param name="splitCount"></param>
         /// <returns></returns>
-        public static List<T>[] GroupSplit<T>(List<T> data, int splitCount)
+        public static List<T>[] GroupSplit<T>(List<T> data, int? splitCount = 20)
         {
-            var group = new List<T>[splitCount];
+            var cnt = 0;
+
+            if (splitCount.HasValue)
+            {
+                cnt = splitCount.Value;
+            }
+
+            var group = new List<T>[cnt];
 
             for (int i = 0; i < data.Count; i++)
             {
                 try
                 {
-                    var groupNo = i % splitCount;
+                    var groupNo = i % cnt;
                     if (group[groupNo] == null)
                     {
                         group[groupNo] = new List<T>();

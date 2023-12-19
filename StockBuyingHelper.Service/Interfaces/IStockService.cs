@@ -16,7 +16,7 @@ namespace StockBuyingHelper.Service.Interfaces
         public Task<List<StockInfoModel>> GetStockList();
 
 
-        public Task<List<GetHighLowIn52WeeksInfoModel>> GetHighLowIn52Weeks();
+        public Task<List<GetHighLowIn52WeeksInfoModel>> GetHighLowIn52Weeks(List<StockPriceInfoModel> realTimeData);
 
         /// <summary>
         /// 取得即時價格

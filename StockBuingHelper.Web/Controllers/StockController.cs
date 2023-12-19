@@ -26,7 +26,7 @@ namespace StockBuingHelper.Web.Controllers
             try
             {
                 var listPrice = await _stockService.GetPrice();
-                var listHighLow = await _stockService.GetHighLowIn52Weeks();
+                var listHighLow = await _stockService.GetHighLowIn52Weeks(listPrice);
                 var listVti = await _stockService.GetVTI(listPrice, listHighLow, 800);
 
                 var data = listVti.Select(c => new StockPriceInfoModel() { StockId = c.StockId, StockName = c.StockName, Price = c.Price }).ToList();                

@@ -63,7 +63,7 @@ namespace StockBuyingHelper.Service.Implements
             return res;
         }
 
-        public async Task<List<GetHighLowIn52WeeksInfoModel>> GetHighLowIn52Weeks()
+        public async Task<List<GetHighLowIn52WeeksInfoModel>> GetHighLowIn52Weeks(List<StockPriceInfoModel> realTimeData)
         {
             var res = new List<GetHighLowIn52WeeksInfoModel>();
             var httpClient = new HttpClient();
@@ -80,52 +80,51 @@ namespace StockBuyingHelper.Service.Implements
                 var sr = await resMessage.Content.ReadAsStringAsync();
                 var config = Configuration.Default;
                 var context = BrowsingContext.New(config);
-                var document = await context.OpenAsync(res => res.Content(sr));
-
-
-                var listTR = document.QuerySelectorAll("tr[id^=row]");
-                var datas = new List<GetHighLowIn52WeeksInfoModel>();                   
+                var document = await context.OpenAsync(c => c.Content(sr));
+                var listTR = document.QuerySelectorAll("tr[id^=row]");     
                 
-                foreach (var tr in listTR)
+                var group = TaskUtils.GroupSplit(listTR.ToList());//分群組 for 多執行緒分批執行
+                var tasks = new Task[group.Length];
+
+                for (int i = 0; i < tasks.Length; i++)
                 {
-                    var Tds = tr.Children;
-                    try
+                    var goupData = group[i];
+                    tasks[i] = Task.Run(async () =>
                     {
-                        datas.Add(new GetHighLowIn52WeeksInfoModel()
+                        foreach (var itemTr in goupData)
                         {
-                            StockId = Tds[0].TextContent.Trim(),
-                            StockName = Tds[1].TextContent.Trim(),
-                            Price = Convert.ToDecimal(Tds[2].TextContent),
-                            High = Convert.ToDecimal(Tds[3].TextContent),
-                            Low = Convert.ToDecimal(Tds[4].TextContent),
-                            HighLowPriceGap = Convert.ToDecimal(Tds[5].TextContent),
-                            HighLowPercentGap = Convert.ToDouble(Tds[6].TextContent),
-                            UpdateDate = DateOnly.FromDateTime(DateTime.Now),
+                            var td = itemTr.Children;
+                            var currentData = realTimeData.Where(c => c.StockId == td[0].TextContent.Trim()).FirstOrDefault();//?.Price ?? 0;
+                            if (currentData != null)
+                            {
+                                var currentPrice = currentData?.Price ?? 0;
+                                decimal.TryParse(td[16].TextContent, out var highPriceInCurrentYear);
+                                decimal.TryParse(td[18].TextContent, out var lowPriceInCurrentYear);
+                                double.TryParse(td[17].TextContent, out var highPriceInCurrentYearPercentGap);
+                                double.TryParse(td[19].TextContent, out var lowPriceInCurrentYearPercentGap);
 
-                            HighPriceInCurrentSeason = Convert.ToDecimal(Tds[8].TextContent),
-                            HighPriceInCurrentSeasonPercentGap = Convert.ToDouble(Tds[9].TextContent),
-                            LowPriceInCurrentSeason = Convert.ToDecimal(Tds[10].TextContent),
-                            LowPriceInCurrentSeasonPercentGap = Convert.ToDouble(Tds[11].TextContent),
+                                var data = new GetHighLowIn52WeeksInfoModel()
+                                {
+                                    StockId = td[0].TextContent.Trim(),
+                                    StockName = td[1].TextContent.Trim(),
+                                    Price = currentPrice,
+                                    HighPriceInCurrentYear = currentPrice > highPriceInCurrentYear ? currentPrice : highPriceInCurrentYear,
+                                    HighPriceInCurrentYearPercentGap = highPriceInCurrentYearPercentGap,
+                                    LowPriceInCurrentYear = currentPrice < lowPriceInCurrentYear ? currentPrice : lowPriceInCurrentYear,
+                                    LowPriceInCurrentYearPercentGap = highPriceInCurrentYearPercentGap
+                                };
 
-                            HighPriceInCurrentHalfYear = Convert.ToDecimal(Tds[12].TextContent),
-                            HighPriceInCurrentHalfYearPercentGap = Convert.ToDouble(Tds[13].TextContent),
-                            LowPriceInCurrentHalfYear = Convert.ToDecimal(Tds[14].TextContent),
-                            LowPriceInCurrentHalfYearPercentGap = Convert.ToDouble(Tds[15].TextContent),
+                                lock (_lock)
+                                {
+                                    res.Add(data);
+                                }
 
-                            HighPriceInCurrentYear = Convert.ToDecimal(Tds[16].TextContent),
-                            HighPriceInCurrentYearPercentGap = Convert.ToDouble(Tds[17].TextContent),
-                            LowPriceInCurrentYear = Convert.ToDecimal(Tds[18].TextContent),
-                            LowPriceInCurrentYearPercentGap = Convert.ToDouble(Tds[19].TextContent),
-                        });
-                    }
-                    catch (Exception ex)
-                    {
-                        var err = ex.Message;                      
-                    }
-
+                                await Task.Delay(100);//add await for async
+                            }
+                        }
+                    });
                 }
-
-                res = datas;
+                Task.WaitAll(tasks);
             }
 
             return res;
