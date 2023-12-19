@@ -28,8 +28,10 @@ namespace StockBuingHelper.Web.Controllers
                 var listPrice = await _stockService.GetPrice();
                 var listHighLow = await _stockService.GetHighLowIn52Weeks();
                 var listVti = await _stockService.GetVTI(listPrice, listHighLow, 800);
-                var listPe = await _stockService.GetPE(listVti);
-                var listRevenue = await _stockService.GetRevenue(listVti);
+
+                var data = listVti.Select(c => new StockPriceInfoModel() { StockId = c.StockId, StockName = c.StockName, Price = c.Price }).ToList();                
+                var listPe = await _stockService.GetPE(data, 25);
+                var listRevenue = await _stockService.GetRevenue(data, 25);
                 var buyingList = await _stockService.GetBuyingResult(listVti, listPe, listRevenue);
                 
                 res = buyingList.Select(c => new BuyingResultDto

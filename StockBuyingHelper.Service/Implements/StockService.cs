@@ -1,11 +1,13 @@
-﻿using AngleSharp;
+﻿using System.Text;
+using System.Text.Json;
+
+using AngleSharp;
 using AngleSharp.Dom;
+
 using StockBuyingHelper.Service.Interfaces;
 using StockBuyingHelper.Service.Models;
-using System.Text;
-using System.Text.Json;
-using System.Text.Json.Serialization;
-using System.Threading.Tasks;
+using StockBuyingHelper.Service.Utility;
+
 
 namespace StockBuyingHelper.Service.Implements
 {
@@ -13,6 +15,10 @@ namespace StockBuyingHelper.Service.Implements
     {
         private readonly object _lock = new object();
 
+        /// <summary>
+        /// 取得台股清單(上市.櫃)
+        /// </summary>
+        /// <returns></returns>
         public async Task<List<StockInfoModel>> GetStockList()
         {
             var res = new List<StockInfoModel>();
@@ -95,14 +101,17 @@ namespace StockBuyingHelper.Service.Implements
                             HighLowPriceGap = Convert.ToDecimal(Tds[5].TextContent),
                             HighLowPercentGap = Convert.ToDouble(Tds[6].TextContent),
                             UpdateDate = DateOnly.FromDateTime(DateTime.Now),
+
                             HighPriceInCurrentSeason = Convert.ToDecimal(Tds[8].TextContent),
                             HighPriceInCurrentSeasonPercentGap = Convert.ToDouble(Tds[9].TextContent),
                             LowPriceInCurrentSeason = Convert.ToDecimal(Tds[10].TextContent),
                             LowPriceInCurrentSeasonPercentGap = Convert.ToDouble(Tds[11].TextContent),
+
                             HighPriceInCurrentHalfYear = Convert.ToDecimal(Tds[12].TextContent),
                             HighPriceInCurrentHalfYearPercentGap = Convert.ToDouble(Tds[13].TextContent),
                             LowPriceInCurrentHalfYear = Convert.ToDecimal(Tds[14].TextContent),
                             LowPriceInCurrentHalfYearPercentGap = Convert.ToDouble(Tds[15].TextContent),
+
                             HighPriceInCurrentYear = Convert.ToDecimal(Tds[16].TextContent),
                             HighPriceInCurrentYearPercentGap = Convert.ToDouble(Tds[17].TextContent),
                             LowPriceInCurrentYear = Convert.ToDecimal(Tds[18].TextContent),
@@ -122,14 +131,17 @@ namespace StockBuyingHelper.Service.Implements
             return res;
         }
 
-        public async Task<List<StockPriceModel>> GetPrice()
+        /// <summary>
+        /// 取得即時價格
+        /// </summary>
+        /// <returns></returns>
+        public async Task<List<StockPriceInfoModel>> GetPrice()
         {
-            var res = new List<StockPriceModel>();
+            var res = new List<StockPriceInfoModel>();
 
             try
             {
                 var httpClient = new HttpClient();
-                //var listPrice = new List<StockPrice>();
                 //var url = $"https://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch=tse_{id}.tw&json=1&delay=0";
                 //var url = "https://histock.tw/stock/rank.aspx?&p=1&d=1";
                 var url = "https://histock.tw/stock/rank.aspx?p=all";
@@ -152,7 +164,7 @@ namespace StockBuyingHelper.Service.Implements
                             continue;
                         }
 
-                        res.Add(new StockPriceModel()
+                        res.Add(new StockPriceInfoModel()
                         {
                             StockId = tr.Children[0].InnerHtml,
                             StockName = tr.Children[1].Children[0].InnerHtml,
@@ -170,7 +182,7 @@ namespace StockBuyingHelper.Service.Implements
             return res;
         }
 
-        public async Task<List<VtiInfoModel>> GetVTI(List<StockPriceModel> priceData, List<GetHighLowIn52WeeksInfoModel> highLowData, int amountLimit = 0)
+        public async Task<List<VtiInfoModel>> GetVTI(List<StockPriceInfoModel> priceData, List<GetHighLowIn52WeeksInfoModel> highLowData, int amountLimit = 0)
         {
             var listVTI =
                 (from a in priceData
@@ -201,8 +213,9 @@ namespace StockBuyingHelper.Service.Implements
             }
 
             return listVTI;
-        }   
-        
+        }
+
+        [Obsolete("近四季EPS取得，改由GetPE從Yahoo Stock取得")]
         /// <summary>
         /// EPS
         /// </summary>
@@ -212,22 +225,11 @@ namespace StockBuyingHelper.Service.Implements
         {
             var res = new List<EpsInfoModel>();
             var httpClient = new HttpClient();
-            var idx = 0;
             var taskCount = 20;
             var tasks = new Task[taskCount];
-            var vtiGroup = new List<VtiInfoModel>[taskCount];
 
-            foreach (var item in data)
-            {
-                idx++;
-
-                var groupNo = idx % taskCount;
-                if (vtiGroup[groupNo] == null)
-                {
-                    vtiGroup[groupNo] = new List<VtiInfoModel>();
-                }
-                vtiGroup[groupNo].Add(item);
-            }
+            //分群組 for 多執行緒分批執行
+            var vtiGroup = TaskUtils.GroupSplit(data, taskCount);
 
             for (int i = 0; i < tasks.Length; i++)
             {
@@ -282,31 +284,20 @@ namespace StockBuyingHelper.Service.Implements
         }
 
         /// <summary>
-        /// 本益比(PE) & 近四季EPS
+        /// 取得本益比(PE) & 近四季EPS
         /// 本益比驗證：https://www.cmoney.tw/forum/stock/1256
         /// </summary>
-        /// <param name="data"></param>
+        /// <param name="data">資料來源</param>
+        /// <param name="taskCount">多執行緒的Task數量</param>
         /// <returns></returns>
-        public async Task<List<PeInfoModel>> GetPE(List<VtiInfoModel> data)
+        public async Task<List<PeInfoModel>> GetPE(List<StockPriceInfoModel> data, int taskCount = 20)
         {
             var res = new List<PeInfoModel>();
             var httpClient = new HttpClient();
-            var idx = 0;
-            var taskCount = 20;
             var tasks = new Task[taskCount];
-            var vtiGroup = new List<VtiInfoModel>[taskCount];
 
-            foreach (var item in data)
-            {
-                idx++;
-
-                var groupNo = idx % taskCount;
-                if (vtiGroup[groupNo] == null)
-                {
-                    vtiGroup[groupNo] = new List<VtiInfoModel>();
-                }
-                vtiGroup[groupNo].Add(item);
-            }
+            //分群組 for 多執行緒分批執行
+            var vtiGroup = TaskUtils.GroupSplit(data, taskCount);
 
             for (int i = 0; i < tasks.Length; i++)
             {
@@ -324,15 +315,15 @@ namespace StockBuyingHelper.Service.Implements
                             var sr = await resMessage.Content.ReadAsStringAsync();
                             var deserializeData = JsonSerializer.Deserialize<EpsInfo2Model>(sr);
 
-                            var epsAcc4Q = deserializeData.data.data.result.revenues.Count > 0 ? Convert.ToDecimal(deserializeData.data.data.result.revenues[0].epsAcc4Q ?? "0.01") : 0.01M;
-                            var interval = deserializeData.data.data.result.revenues.Count > 0 ? deserializeData.data.data.result.revenues[0].date.ToString("yyyy/MM") ?? "" : "";
+                            var epsAcc4Q = deserializeData.data.data.result.revenues.Count > 0 ? Convert.ToDecimal(deserializeData.data.data.result.revenues[0].epsAcc4Q) : 0M;
+                            var interval = deserializeData.data.data.result.revenues.Count > 0 ? $"{deserializeData.data.data.result.revenues[0].date.AddMonths(-11).ToString("yyyy/MM")} ~ {deserializeData.data.data.result.revenues[0].date.ToString("yyyy/MM")}" : "";
 
                             var peInfo = new PeInfoModel() {
                                 StockId = item.StockId, 
                                 StockName = item.StockName, 
                                 EpsAcc4QInterval = interval,
                                 EpsAcc4Q = epsAcc4Q,
-                                PE = Convert.ToDouble(Math.Round(item.Price / epsAcc4Q, 2))
+                                PE = epsAcc4Q > 0 ? Convert.ToDouble(Math.Round(item.Price / epsAcc4Q, 2)) : 0
                             };
 
                             lock (_lock)
@@ -349,30 +340,19 @@ namespace StockBuyingHelper.Service.Implements
         }
 
         /// <summary>
-        /// 每月營收
+        /// 取得每月MoM. YoY增減趴數
         /// </summary>
-        /// <param name="data"></param>
+        /// <param name="data">資料來源</param>
+        /// <param name="taskCount">多執行緒的Task數量</param>
         /// <returns></returns>
-        public async Task<List<RevenueInfoModel>> GetRevenue(List<VtiInfoModel> data)
+        public async Task<List<RevenueInfoModel>> GetRevenue(List<StockPriceInfoModel> data, int taskCount = 20)
         {
             var res = new List<RevenueInfoModel>();
             var httpClient = new HttpClient();
-            var idx = 0;
-            var taskCount = 20;
             var tasks = new Task[taskCount];
-            var vtiGroup = new List<VtiInfoModel>[taskCount];
 
-            foreach (var item in data)
-            {
-                idx++;
-
-                var groupNo = idx % taskCount;
-                if (vtiGroup[groupNo] == null)
-                {
-                    vtiGroup[groupNo] = new List<VtiInfoModel>();
-                }
-                vtiGroup[groupNo].Add(item);
-            }
+            //分群組 for 多執行緒分批執行
+            var vtiGroup = TaskUtils.GroupSplit(data, taskCount);
 
             for (int i = 0; i < tasks.Length; i++)
             {
@@ -417,6 +397,7 @@ namespace StockBuyingHelper.Service.Implements
             return res;
         }
 
+
         public async Task<List<BuyingResultModel>> GetBuyingResult(List<VtiInfoModel> vtiData, List<PeInfoModel> peData, List<RevenueInfoModel> revenueData)
         {
             var res =
@@ -446,7 +427,8 @@ namespace StockBuyingHelper.Service.Implements
                 .Where(c =>
                     c.EPS > 0
                     && c.PE < 30
-                    && (c.MOM_1 > 0 || c.YOY_1 > 0)
+                    //&& (c.MOM_1 > 0 || c.YOY_1 > 0)
+                    && (c.MOM_1 > 0 || c.MOM_2 > 0 && c.MOM_3 > 0 )
                 )
                 .OrderByDescending(o => o.EPS);                
 
