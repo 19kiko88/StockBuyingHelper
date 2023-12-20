@@ -8,6 +8,7 @@ namespace StockBuyingHelper.Service.Dtos
 {
     public class BuyingResultDto
     {
+        public string Sn { get; set; }
         public string StockId { get; set; }
         public string StockName { get; set; }
         public decimal Price { get; set; }

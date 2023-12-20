@@ -1,6 +1,4 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-
-using StockBuyingHelper.Service;
 using StockBuyingHelper.Service.Dtos;
 using StockBuyingHelper.Service.Interfaces;
 using StockBuyingHelper.Service.Models;
@@ -20,22 +18,35 @@ namespace StockBuingHelper.Web.Controllers
         }
 
         [HttpGet]
-        public async Task<List<BuyingResultDto>> GetVtiData()
+        public async Task<List<BuyingResultDto>> GetVtiData([FromQuery] bool queryEtfs = false)
         {
             var res = new List<BuyingResultDto>();
             try
             {
+                var listStockInfo = await _stockService.GetStockList();
                 var listPrice = await _stockService.GetPrice();
                 var listHighLow = await _stockService.GetHighLowIn52Weeks(listPrice);
                 var listVti = await _stockService.GetVTI(listPrice, listHighLow, 800);
 
-                var data = listVti.Select(c => new StockPriceInfoModel() { StockId = c.StockId, StockName = c.StockName, Price = c.Price }).ToList();                
+                var data =
+                    (from a in listStockInfo
+                     join b in listVti on a.StockId equals b.StockId
+                     select new StockInfoDto
+                     {
+                         StockId = a.StockId,
+                         StockName = a.StockName,
+                         Price = b.Price,
+                         Type = a.CFICode
+                     })
+                     .Where(c => (queryEtfs && 1 == 1) || (!queryEtfs && c.Type == StockType.ESVUFR))
+                     .ToList();
                 var listPe = await _stockService.GetPE(data, 25);
                 var listRevenue = await _stockService.GetRevenue(data, 25);
-                var buyingList = await _stockService.GetBuyingResult(listVti, listPe, listRevenue);
+                var buyingList = await _stockService.GetBuyingResult(listStockInfo, listVti, listPe, listRevenue);
                 
-                res = buyingList.Select(c => new BuyingResultDto
+                res = buyingList.Select((c, idx) => new BuyingResultDto
                 {
+                    Sn = (idx + 1).ToString(),
                     StockId = c.StockId,
                     StockName = c.StockName,
                     Price = c.Price,
@@ -65,5 +76,10 @@ namespace StockBuingHelper.Web.Controllers
 
             return res;
         }
+
+        //getROE
+        //filter0050
+        //exceldownload
+        //10年線
     }
 }

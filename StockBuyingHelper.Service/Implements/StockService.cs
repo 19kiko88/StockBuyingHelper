@@ -3,7 +3,7 @@ using System.Text.Json;
 
 using AngleSharp;
 using AngleSharp.Dom;
-
+using StockBuyingHelper.Service.Dtos;
 using StockBuyingHelper.Service.Interfaces;
 using StockBuyingHelper.Service.Models;
 using StockBuyingHelper.Service.Utility;
@@ -22,8 +22,8 @@ namespace StockBuyingHelper.Service.Implements
         public async Task<List<StockInfoModel>> GetStockList()
         {
             var res = new List<StockInfoModel>();
-            var httpClient = new HttpClient();
-            var url = "https://isin.twse.com.tw/isin/C_public.jsp?strMode=2";
+            var httpClient = new HttpClient();            
+            var url = "https://isin.twse.com.tw/isin/C_public.jsp?strMode=2";//本國上市證券國際證券辨識號碼一覽表
             var resMessage = await httpClient.GetAsync(url);
 
             //檢查回應的伺服器狀態StatusCode是否是200 OK
@@ -36,13 +36,17 @@ namespace StockBuyingHelper.Service.Implements
                     var config = Configuration.Default;
                     var context = BrowsingContext.New(config);
                     var document = await context.OpenAsync(res => res.Content(htmlString));
-                    var listTR = document.QuerySelectorAll("tr");
+                    var listTR = document.QuerySelectorAll("tr:not([colspan])");
 
-                    foreach (var tr in listTR)
+                    //ESVUFR：一般股, ETFs：ETF
+                    var filterListTr = listTR.Where(c => 
+                        c.Children.Count() >= 7 
+                        && (c.Children[5].TextContent == StockType.ESVUFR || StockType.ETFs.Contains(c.Children[5].TextContent))
+                        ).ToList();
+
+                    foreach (var tr in filterListTr)
                     {
                         var arrayTd = tr.Children.ToArray();
-                        if (tr.Children.Length >= 7)
-                        {
                             res.Add(new StockInfoModel()
                             {
                                 StockId = arrayTd[0].TextContent.Split('　')[0],
@@ -52,18 +56,66 @@ namespace StockBuyingHelper.Service.Implements
                                 IndustryType = arrayTd[4].TextContent,
                                 CFICode = arrayTd[5].TextContent,
                                 Note = arrayTd[6].TextContent
-                            });
-                        }
+                            });                        
                     }
                 }                
             }
 
-            res = res.Where(c => c.CFICode == "ESVUFR" || c.CFICode.StartsWith("CEO")).ToList();
+            res = res.Where(c => c.CFICode == StockType.ESVUFR || StockType.ETFs.Contains(c.CFICode)).ToList();
 
             return res;
         }
 
-        public async Task<List<GetHighLowIn52WeeksInfoModel>> GetHighLowIn52Weeks(List<StockPriceInfoModel> realTimeData)
+        /// <summary>
+        /// 取得即時價格
+        /// </summary>
+        /// <returns></returns>
+        public async Task<List<StockInfoDto>> GetPrice()
+        {
+            var res = new List<StockInfoDto>();
+
+            var httpClient = new HttpClient();
+            //var url = $"https://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch=tse_{id}.tw&json=1&delay=0";
+            //var url = "https://histock.tw/stock/rank.aspx?&p=1&d=1";
+            var url = "https://histock.tw/stock/rank.aspx?p=all";
+
+            var resMessage = await httpClient.GetAsync(url);
+
+            //檢查回應的伺服器狀態StatusCode是否是200 OK
+            if (resMessage.StatusCode == System.Net.HttpStatusCode.OK)
+            {
+                var sr = await resMessage.Content.ReadAsStringAsync();
+                var config = Configuration.Default;
+                var context = BrowsingContext.New(config);
+                var document = await context.OpenAsync(res => res.Content(sr));
+
+                var listTR = document.QuerySelectorAll("#CPHB1_gv tr");
+                foreach (var tr in listTR)
+                {
+                    if (tr.Index() == 0)
+                    {
+                        continue;
+                    }
+
+                    res.Add(new StockInfoDto()
+                    {
+                        StockId = tr.Children[0].InnerHtml,
+                        StockName = tr.Children[1].Children[0].InnerHtml,
+                        Price = Convert.ToDecimal(tr.Children[2].Children[0].InnerHtml)
+                    });
+                }
+            }
+
+            return res;
+        }
+
+        /// <summary>
+        /// 取得52周間最高 & 最低價(非最後收盤成交價)
+        /// </summary>
+        /// <param name="realTimeData">即時成交價</param>
+        /// <param name="taskCount">多執行緒的Task數量</param>
+        /// <returns></returns>
+        public async Task<List<GetHighLowIn52WeeksInfoModel>> GetHighLowIn52Weeks(List<StockInfoDto> realTimeData, int taskCount = 20)
         {
             var res = new List<GetHighLowIn52WeeksInfoModel>();
             var httpClient = new HttpClient();
@@ -83,35 +135,36 @@ namespace StockBuyingHelper.Service.Implements
                 var document = await context.OpenAsync(c => c.Content(sr));
                 var listTR = document.QuerySelectorAll("tr[id^=row]");     
                 
-                var group = TaskUtils.GroupSplit(listTR.ToList());//分群組 for 多執行緒分批執行
-                var tasks = new Task[group.Length];
+                var group = TaskUtils.GroupSplit(listTR.ToList(), taskCount);//分群組 for 多執行緒分批執行
+                var tasks = new Task[taskCount];
 
                 for (int i = 0; i < tasks.Length; i++)
                 {
-                    var goupData = group[i];
+                    var groupData = group[i];
                     tasks[i] = Task.Run(async () =>
                     {
-                        foreach (var itemTr in goupData)
+                        foreach (var itemTr in groupData)
                         {
                             var td = itemTr.Children;
-                            var currentData = realTimeData.Where(c => c.StockId == td[0].TextContent.Trim()).FirstOrDefault();//?.Price ?? 0;
+                            var currentData = realTimeData.Where(c => c.StockId == td[0].TextContent.Trim()).FirstOrDefault();
                             if (currentData != null)
                             {
+                                //網站資料來源非即時，必須把成交價更新為即時價格
                                 var currentPrice = currentData?.Price ?? 0;
                                 decimal.TryParse(td[16].TextContent, out var highPriceInCurrentYear);
                                 decimal.TryParse(td[18].TextContent, out var lowPriceInCurrentYear);
-                                double.TryParse(td[17].TextContent, out var highPriceInCurrentYearPercentGap);
-                                double.TryParse(td[19].TextContent, out var lowPriceInCurrentYearPercentGap);
+                                //double.TryParse(td[17].TextContent, out var highPriceInCurrentYearPercentGap);
+                                //double.TryParse(td[19].TextContent, out var lowPriceInCurrentYearPercentGap);
 
                                 var data = new GetHighLowIn52WeeksInfoModel()
                                 {
                                     StockId = td[0].TextContent.Trim(),
                                     StockName = td[1].TextContent.Trim(),
                                     Price = currentPrice,
-                                    HighPriceInCurrentYear = currentPrice > highPriceInCurrentYear ? currentPrice : highPriceInCurrentYear,
-                                    HighPriceInCurrentYearPercentGap = highPriceInCurrentYearPercentGap,
-                                    LowPriceInCurrentYear = currentPrice < lowPriceInCurrentYear ? currentPrice : lowPriceInCurrentYear,
-                                    LowPriceInCurrentYearPercentGap = highPriceInCurrentYearPercentGap
+                                    HighPriceInCurrentYear = currentPrice > highPriceInCurrentYear ? currentPrice : highPriceInCurrentYear,//1年最高股價(元)
+                                    HighPriceInCurrentYearPercentGap = highPriceInCurrentYear > 0 ? Convert.ToDouble(Math.Round(((currentPrice - highPriceInCurrentYear) / highPriceInCurrentYear) * 100, 2)) : 0,//現距1年高點跌幅(%)
+                                    LowPriceInCurrentYear = currentPrice < lowPriceInCurrentYear ? currentPrice : lowPriceInCurrentYear,//1年最低股價(元)
+                                    LowPriceInCurrentYearPercentGap = lowPriceInCurrentYear > 0 ? Convert.ToDouble(Math.Round(((currentPrice - lowPriceInCurrentYear) / lowPriceInCurrentYear) * 100, 2)) : 0//現距1年低點漲幅(%)
                                 };
 
                                 lock (_lock)
@@ -119,7 +172,7 @@ namespace StockBuyingHelper.Service.Implements
                                     res.Add(data);
                                 }
 
-                                await Task.Delay(100);//add await for async
+                                await Task.Delay(10);//add await for async
                             }
                         }
                     });
@@ -131,57 +184,13 @@ namespace StockBuyingHelper.Service.Implements
         }
 
         /// <summary>
-        /// 取得即時價格
+        /// 取得近52周最高最低價格區間內，目前價格離最高價還有多少百分比，並換算成vti係數(vti越高，表示離52周區間內最高點越近)
         /// </summary>
+        /// <param name="priceData">即時價格資料</param>
+        /// <param name="highLowData">取得52周間最高 & 最低價資料(非最終成交價)</param>
+        /// <param name="amountLimit">vti篩選，vti值必須在多少以上</param>
         /// <returns></returns>
-        public async Task<List<StockPriceInfoModel>> GetPrice()
-        {
-            var res = new List<StockPriceInfoModel>();
-
-            try
-            {
-                var httpClient = new HttpClient();
-                //var url = $"https://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch=tse_{id}.tw&json=1&delay=0";
-                //var url = "https://histock.tw/stock/rank.aspx?&p=1&d=1";
-                var url = "https://histock.tw/stock/rank.aspx?p=all";
-
-                var resMessage = await httpClient.GetAsync(url);
-
-                //檢查回應的伺服器狀態StatusCode是否是200 OK
-                if (resMessage.StatusCode == System.Net.HttpStatusCode.OK)
-                {
-                    var sr = await resMessage.Content.ReadAsStringAsync();
-                    var config = Configuration.Default;
-                    var context = BrowsingContext.New(config);
-                    var document = await context.OpenAsync(res => res.Content(sr));
-
-                    var listTR = document.QuerySelectorAll("#CPHB1_gv tr");
-                    foreach (var tr in listTR)
-                    {
-                        if (tr.Index() == 0)
-                        {
-                            continue;
-                        }
-
-                        res.Add(new StockPriceInfoModel()
-                        {
-                            StockId = tr.Children[0].InnerHtml,
-                            StockName = tr.Children[1].Children[0].InnerHtml,
-                            Price = Convert.ToDecimal(tr.Children[2].Children[0].InnerHtml)
-                        });
-                    }
-                }
-
-            }
-            catch (Exception ex)
-            {
-                var errMsg = ex.Message;
-            }
-
-            return res;
-        }
-
-        public async Task<List<VtiInfoModel>> GetVTI(List<StockPriceInfoModel> priceData, List<GetHighLowIn52WeeksInfoModel> highLowData, int amountLimit = 0)
+        public async Task<List<VtiInfoModel>> GetVTI(List<StockInfoDto> priceData, List<GetHighLowIn52WeeksInfoModel> highLowData, int amountLimit = 0)
         {
             var listVTI =
                 (from a in priceData
@@ -214,74 +223,6 @@ namespace StockBuyingHelper.Service.Implements
             return listVTI;
         }
 
-        [Obsolete("近四季EPS取得，改由GetPE從Yahoo Stock取得")]
-        /// <summary>
-        /// EPS
-        /// </summary>
-        /// <param name="data"></param>
-        /// <returns></returns>
-        public async Task<List<EpsInfoModel>> GetEPS(List<VtiInfoModel> data)
-        {
-            var res = new List<EpsInfoModel>();
-            var httpClient = new HttpClient();
-            var taskCount = 20;
-            var tasks = new Task[taskCount];
-
-            //分群組 for 多執行緒分批執行
-            var vtiGroup = TaskUtils.GroupSplit(data, taskCount);
-
-            for (int i = 0; i < tasks.Length; i++)
-            {
-                var vtiData = vtiGroup[i];
-                tasks[i] = Task.Run(async () =>
-                {
-                    foreach (var item in vtiData)
-                    {
-                        var url = $"https://tw.stock.yahoo.com/quote/{item.StockId}.TW/eps";//eps
-                        var resMessage = await httpClient.GetAsync(url);
-
-                        //檢查回應的伺服器狀態StatusCode是否是200 OK
-                        if (resMessage.StatusCode == System.Net.HttpStatusCode.OK)
-                        {
-                            var sr = await resMessage.Content.ReadAsStringAsync();
-                            var config = Configuration.Default;
-                            var context = BrowsingContext.New(config);
-                            var document = await context.OpenAsync(res => res.Content(sr));
-
-                            var listTR = document.QuerySelectorAll("#qsp-eps-table .table-body-wrapper  ul li[class*='List']").Take(4);//只取最近4季的EPS
-                            var epsInfo = new EpsInfoModel() { StockId = item.StockId, StockName = item.StockName, EpsData = new List<Eps>() };
-                            foreach (var tr in listTR)
-                            {
-                                var eps = Convert.ToDecimal(tr.QuerySelector("span").InnerHtml);
-
-                                epsInfo.EpsData.Add(new Eps
-                                {
-                                    Quarter = tr.QuerySelector("div").Children[0].TextContent,
-                                    EPS = eps
-                                });
-                            }
-                            var epsSum = epsInfo.EpsData.Select(c => c.EPS).Sum();
-                            epsInfo.EpsInterval = $"{epsInfo.EpsData.LastOrDefault()?.Quarter} ~ {epsInfo.EpsData.FirstOrDefault()?.Quarter}";
-
-                            try
-                            {
-                                epsInfo.PE = Convert.ToDouble(Math.Round(item.Price / epsSum, 2));
-                            }
-                            catch (Exception ex)
-                            {
-                                var msg = ex.Message;
-                            }
-
-                            res.Add(epsInfo);
-                        }
-                    }
-                });
-            }
-            Task.WaitAll(tasks);
-
-            return res;
-        }
-
         /// <summary>
         /// 取得本益比(PE) & 近四季EPS
         /// 本益比驗證：https://www.cmoney.tw/forum/stock/1256
@@ -289,7 +230,7 @@ namespace StockBuyingHelper.Service.Implements
         /// <param name="data">資料來源</param>
         /// <param name="taskCount">多執行緒的Task數量</param>
         /// <returns></returns>
-        public async Task<List<PeInfoModel>> GetPE(List<StockPriceInfoModel> data, int taskCount = 20)
+        public async Task<List<PeInfoModel>> GetPE(List<StockInfoDto> data, int taskCount = 20)
         {
             var res = new List<PeInfoModel>();
             var httpClient = new HttpClient();
@@ -312,7 +253,12 @@ namespace StockBuyingHelper.Service.Implements
                         if (resMessage.StatusCode == System.Net.HttpStatusCode.OK)
                         {
                             var sr = await resMessage.Content.ReadAsStringAsync();
-                            var deserializeData = JsonSerializer.Deserialize<EpsInfo2Model>(sr);
+
+                            /*
+                             *json => model web tool 
+                             *ref：https://json2csharp.com/
+                             */
+                            var deserializeData = JsonSerializer.Deserialize<EpsInfoModel>(sr);
 
                             var epsAcc4Q = deserializeData.data.data.result.revenues.Count > 0 ? Convert.ToDecimal(deserializeData.data.data.result.revenues[0].epsAcc4Q) : 0M;
                             var interval = deserializeData.data.data.result.revenues.Count > 0 ? $"{deserializeData.data.data.result.revenues[0].date.AddMonths(-11).ToString("yyyy/MM")} ~ {deserializeData.data.data.result.revenues[0].date.ToString("yyyy/MM")}" : "";
@@ -344,7 +290,7 @@ namespace StockBuyingHelper.Service.Implements
         /// <param name="data">資料來源</param>
         /// <param name="taskCount">多執行緒的Task數量</param>
         /// <returns></returns>
-        public async Task<List<RevenueInfoModel>> GetRevenue(List<StockPriceInfoModel> data, int taskCount = 20)
+        public async Task<List<RevenueInfoModel>> GetRevenue(List<StockInfoDto> data, int taskCount = 20)
         {
             var res = new List<RevenueInfoModel>();
             var httpClient = new HttpClient();
@@ -396,42 +342,125 @@ namespace StockBuyingHelper.Service.Implements
             return res;
         }
 
-
-        public async Task<List<BuyingResultModel>> GetBuyingResult(List<VtiInfoModel> vtiData, List<PeInfoModel> peData, List<RevenueInfoModel> revenueData)
+        /// <summary>
+        /// 取得總表
+        /// </summary>
+        /// <param name="stockData"></param>
+        /// <param name="vtiData">VTI資料</param>
+        /// <param name="peData">近四季EPS&PE資料</param>
+        /// <param name="revenueData">近三個月營收MoM. YoY資料</param>
+        /// <returns></returns>
+        public async Task<List<BuyingResultModel>> GetBuyingResult(List<StockInfoModel> stockData, List<VtiInfoModel> vtiData, List<PeInfoModel> peData, List<RevenueInfoModel> revenueData)
         {
             var res =
-                (from a in vtiData
-                select new BuyingResultModel()
-                {
-                    StockId = a.StockId,
-                    StockName = a.StockName,
-                    Price = a.Price,
-                    HighIn52 = a.HighIn52,
-                    LowIn52 = a.LowIn52,
-                    EpsInterval = peData.Where(c => c.StockId == a.StockId).FirstOrDefault()?.EpsAcc4QInterval,
-                    EPS = peData.Where(c => c.StockId == a.StockId).FirstOrDefault().EpsAcc4Q,
-                    PE = peData.Where(c => c.StockId == a.StockId).FirstOrDefault()?.PE ?? 0,
-                    RevenueInterval_1 = revenueData.Where(c => c.StockId == a.StockId).FirstOrDefault()?.RevenueData.Count > 0 ? revenueData.Where(c => c.StockId == a.StockId).FirstOrDefault()?.RevenueData[0]?.RevenueInterval : "",
-                    MOM_1 = revenueData.Where(c => c.StockId == a.StockId).FirstOrDefault()?.RevenueData.Count > 0 ? revenueData.Where(c => c.StockId == a.StockId).FirstOrDefault()?.RevenueData[0].MOM : 0,
-                    YOY_1 = revenueData.Where(c => c.StockId == a.StockId).FirstOrDefault()?.RevenueData.Count > 0 ? revenueData.Where(c => c.StockId == a.StockId).FirstOrDefault()?.RevenueData[0].YOY : 0,
-                    RevenueInterval_2 = revenueData.Where(c => c.StockId == a.StockId).FirstOrDefault()?.RevenueData.Count > 0 ? revenueData.Where(c => c.StockId == a.StockId).FirstOrDefault()?.RevenueData[1]?.RevenueInterval : "",
-                    MOM_2 = revenueData.Where(c => c.StockId == a.StockId).FirstOrDefault()?.RevenueData.Count > 0 ? revenueData.Where(c => c.StockId == a.StockId).FirstOrDefault()?.RevenueData[1].MOM : 0,
-                    YOY_2 = revenueData.Where(c => c.StockId == a.StockId).FirstOrDefault()?.RevenueData.Count > 0 ? revenueData.Where(c => c.StockId == a.StockId).FirstOrDefault()?.RevenueData[1].YOY : 0,
-                    RevenueInterval_3 = revenueData.Where(c => c.StockId == a.StockId).FirstOrDefault()?.RevenueData.Count > 0 ? revenueData.Where(c => c.StockId == a.StockId).FirstOrDefault()?.RevenueData[2]?.RevenueInterval : "",
-                    MOM_3 = revenueData.Where(c => c.StockId == a.StockId).FirstOrDefault()?.RevenueData.Count > 0 ? revenueData.Where(c => c.StockId == a.StockId).FirstOrDefault()?.RevenueData[2].MOM : 0,
-                    YOY_3 = revenueData.Where(c => c.StockId == a.StockId).FirstOrDefault()?.RevenueData.Count > 0 ? revenueData.Where(c => c.StockId == a.StockId).FirstOrDefault()?.RevenueData[2].YOY : 0,
-                    VTI = a.VTI,
-                    Amount = a.Amount
-                })
-                .Where(c =>
-                    c.EPS > 0
-                    && c.PE < 30
-                    //&& (c.MOM_1 > 0 || c.YOY_1 > 0)
-                    && (c.MOM_1 > 0 || c.MOM_2 > 0 && c.MOM_3 > 0 )
-                )
-                .OrderByDescending(o => o.EPS);                
+                (from a in stockData
+                 join b in vtiData on a.StockId equals b.StockId
+                 join c in peData on a.StockId equals c.StockId
+                 join d in revenueData on a.StockId equals d.StockId
+                 select new BuyingResultModel
+                 {
+                     StockId = a.StockId,
+                     StockName = a.StockName,
+                     Price = b.Price,
+                     Type = a.CFICode,
+                     HighIn52 = b.HighIn52,
+                     LowIn52 = b.LowIn52,
+                     EpsInterval = c.EpsAcc4QInterval,
+                     EPS = c.EpsAcc4Q,
+                     PE = c.PE,
+                     RevenueInterval_1 = d.RevenueData.Count > 0 ? d.RevenueData[0].RevenueInterval : "",
+                     MOM_1 = d.RevenueData.Count > 0 ? d.RevenueData[0].MOM : 0,
+                     YOY_1 = d.RevenueData.Count > 0 ? d.RevenueData[0].YOY : 0,
+                     RevenueInterval_2 = d.RevenueData.Count > 0 ? d.RevenueData[1].RevenueInterval : "",
+                     MOM_2 = d.RevenueData.Count > 0 ? d.RevenueData[1].MOM : 0,
+                     YOY_2 = d.RevenueData.Count > 0 ? d.RevenueData[1].YOY : 0,
+                     RevenueInterval_3 = d.RevenueData.Count > 0 ? d.RevenueData[2].RevenueInterval : "",
+                     MOM_3 = d.RevenueData.Count > 0 ? d.RevenueData[2].MOM : 0,
+                     YOY_3 = d.RevenueData.Count > 0 ? d.RevenueData[2].YOY : 0,
+                     VTI = b.VTI,
+                     Amount = b.Amount
+                 })
+                 .Where(c => 
+                    (c.Type == StockType.ESVUFR && 
+                    (
+                        c.EPS > 0
+                        && c.PE < 30
+                        && (c.MOM_1 > 0 || c.MOM_2 > 0 || c.MOM_3 > 0)
+                    )) 
+                    || StockType.ETFs.Contains(c.Type)
+                 )
+                 .OrderByDescending(o => o.Type).ThenByDescending(o => o.EPS)
+                 .ToList();           
 
             return res.ToList();
+        }
+
+        [Obsolete("近四季EPS取得，改由GetPE從Yahoo Stock取得")]
+        /// <summary>
+        /// EPS
+        /// </summary>
+        /// <param name="data"></param>
+        /// <returns></returns>
+        public async Task<List<ObsoleteEpsInfoModel>> GetEPS(List<VtiInfoModel> data)
+        {
+            var res = new List<ObsoleteEpsInfoModel>();
+            var httpClient = new HttpClient();
+            var taskCount = 20;
+            var tasks = new Task[taskCount];
+
+            //分群組 for 多執行緒分批執行
+            var vtiGroup = TaskUtils.GroupSplit(data, taskCount);
+
+            for (int i = 0; i < tasks.Length; i++)
+            {
+                var vtiData = vtiGroup[i];
+                tasks[i] = Task.Run(async () =>
+                {
+                    foreach (var item in vtiData)
+                    {
+                        var url = $"https://tw.stock.yahoo.com/quote/{item.StockId}.TW/eps";//eps
+                        var resMessage = await httpClient.GetAsync(url);
+
+                        //檢查回應的伺服器狀態StatusCode是否是200 OK
+                        if (resMessage.StatusCode == System.Net.HttpStatusCode.OK)
+                        {
+                            var sr = await resMessage.Content.ReadAsStringAsync();
+                            var config = Configuration.Default;
+                            var context = BrowsingContext.New(config);
+                            var document = await context.OpenAsync(res => res.Content(sr));
+
+                            var listTR = document.QuerySelectorAll("#qsp-eps-table .table-body-wrapper  ul li[class*='List']").Take(4);//只取最近4季的EPS
+                            var epsInfo = new ObsoleteEpsInfoModel() { StockId = item.StockId, StockName = item.StockName, EpsData = new List<Eps>() };
+                            foreach (var tr in listTR)
+                            {
+                                var eps = Convert.ToDecimal(tr.QuerySelector("span").InnerHtml);
+
+                                epsInfo.EpsData.Add(new Eps
+                                {
+                                    Quarter = tr.QuerySelector("div").Children[0].TextContent,
+                                    EPS = eps
+                                });
+                            }
+                            var epsSum = epsInfo.EpsData.Select(c => c.EPS).Sum();
+                            epsInfo.EpsInterval = $"{epsInfo.EpsData.LastOrDefault()?.Quarter} ~ {epsInfo.EpsData.FirstOrDefault()?.Quarter}";
+
+                            try
+                            {
+                                epsInfo.PE = Convert.ToDouble(Math.Round(item.Price / epsSum, 2));
+                            }
+                            catch (Exception ex)
+                            {
+                                var msg = ex.Message;
+                            }
+
+                            res.Add(epsInfo);
+                        }
+                    }
+                });
+            }
+            Task.WaitAll(tasks);
+
+            return res;
         }
     }
 }

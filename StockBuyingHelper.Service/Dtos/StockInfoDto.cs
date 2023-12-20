@@ -4,12 +4,13 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace StockBuyingHelper.Service.Models
+namespace StockBuyingHelper.Service.Dtos
 {
-    public class StockPriceInfoModel
+    public class StockInfoDto
     {
         public string StockId { get; set; }
         public string StockName { get; set; }
         public decimal Price { get; set; }
+        public string Type { get; set; }
     }
 }

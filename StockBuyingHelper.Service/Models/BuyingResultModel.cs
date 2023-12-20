@@ -11,6 +11,7 @@ namespace StockBuyingHelper.Service.Models
         public string StockId { get; set; }
         public string StockName { get; set; }
         public decimal Price { get; set; }
+        public string Type { get; set; }
         public decimal HighIn52 { get; set; }
         public decimal LowIn52 { get; set; }
         public string EpsInterval { get; set; }

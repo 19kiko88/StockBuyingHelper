@@ -8,16 +8,58 @@ namespace StockBuyingHelper.Service.Models
 {
     public class EpsInfoModel
     {
-        public string StockId { get; set; }
-        public string StockName { get; set; }
-        public string EpsInterval { get; set; }
-        public List<Eps> EpsData { get; set; }
-        public double PE { get; set; }
+        public Data data { get; set; }
+        public Meta meta { get; set; }        
     }
 
-    public class Eps
+
+    // Root myDeserializedClass = JsonConvert.DeserializeObject<Root>(myJsonResponse);
+    public class Data
     {
-        public string Quarter { get; set; }
-        public decimal EPS { get; set; }
+        public Data data { get; set; }
+        public Result result { get; set; }
+    }
+
+    public class LastYear
+    {
+        public DateTime date { get; set; }
+        public object revenue { get; set; }
+        public object revenueAcc { get; set; }
+        public object revenueMoM { get; set; }
+        public string revenueQoQ { get; set; }
+        public string revenueYoY { get; set; }
+        public object revenueYoYAcc { get; set; }
+    }
+
+    public class Meta
+    {
+    }
+
+    public class PriceAssessment
+    {
+        public string avgPrice { get; set; }
+    }
+
+    public class Result
+    {
+        public List<Revenue2> revenues { get; set; }
+    }
+
+    public class Revenue2
+    {
+        public string symbol { get; set; }
+        public DateTime date { get; set; }
+        public object revenue { get; set; }
+        public object revenueAcc { get; set; }
+        public object revenueMoM { get; set; }
+        public string revenueQoQ { get; set; }
+        public string revenueYoY { get; set; }
+        public object revenueYoYAcc { get; set; }
+        public object eps { get; set; }
+        public string epsQoQ { get; set; }
+        public string epsYoY { get; set; }
+        public string epsAcc4Q { get; set; }
+        public LastYear lastYear { get; set; }
+        public PriceAssessment priceAssessment { get; set; }
     }
 }
