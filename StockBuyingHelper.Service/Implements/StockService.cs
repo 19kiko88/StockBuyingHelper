@@ -384,13 +384,21 @@ namespace StockBuyingHelper.Service.Implements
                     (c.Type == StockType.ESVUFR && 
                     (
                         c.EPS > 0
-                        && c.PE < 30
-                        && (c.MOM_1 > 0 || c.MOM_2 > 0 || c.MOM_3 > 0)
+                        && c.PE < 25
+                        && ((c.MOM_1 > 0 || c.MOM_2 > 0 || c.MOM_3 > 0) || (c.YOY_1 > 0 || (c.YOY_1 > 0 &&  (c.YOY_1 > c.YOY_2  && c.YOY_2 > c.YOY_3))))
                     )) 
-                    || StockType.ETFs.Contains(c.Type)
+                    || StockType.ETFs.Contains(c.Type)//ETF不管營收
                  )
                  .OrderByDescending(o => o.Type).ThenByDescending(o => o.EPS)
-                 .ToList();           
+                 .ToList();
+
+            /*
+             * 選股條件：
+             * 1.長期(1年)：VTI大於800 
+             * 2.長期(近四季)：EPS > 0 && PE < 25
+             * 3.中長期(近一季)：MoM不能都為負成長 || (最新(YoY)當月累計營收要比去年累計營收高 || YoY逐步轉正)
+             * 4.短期：交易量 > 300
+             */
 
             return res.ToList();
         }
