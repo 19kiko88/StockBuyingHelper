@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using StockBuingHelper.Web.Dtos;
 using StockBuyingHelper.Service.Dtos;
 using StockBuyingHelper.Service.Interfaces;
 using StockBuyingHelper.Service.Models;
@@ -43,7 +44,7 @@ namespace StockBuingHelper.Web.Controllers
                 var listPe = await _stockService.GetPE(data, 25);
                 var listRevenue = await _stockService.GetRevenue(data, 25);
                 var listVolume = await _stockService.GetVolume(data, 25);
-                var buyingList = await _stockService.GetBuyingResult(listStockInfo, listVti, listPe, listRevenue);
+                var buyingList = await _stockService.GetBuyingResult(listStockInfo, listVti, listPe, listRevenue, listVolume);
                 
                 res = buyingList.Select((c, idx) => new BuyingResultDto
                 {
@@ -65,6 +66,7 @@ namespace StockBuingHelper.Web.Controllers
                     RevenueInterval_3 = c.RevenueInterval_3,
                     MOM_3 = c.MOM_3,
                     YOY_3 = c.YOY_3,
+                    VolumeDatas = c.VolumeDatas,
                     VTI = c.VTI,
                     Amount = c.Amount
                 }).ToList();

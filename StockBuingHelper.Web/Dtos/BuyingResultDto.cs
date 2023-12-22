@@ -1,10 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using StockBuyingHelper.Service.Models;
 
-namespace StockBuyingHelper.Service.Dtos
+namespace StockBuingHelper.Web.Dtos
 {
     public class BuyingResultDto
     {
@@ -26,6 +22,7 @@ namespace StockBuyingHelper.Service.Dtos
         public string RevenueInterval_3 { get; set; }
         public double? MOM_3 { get; set; }
         public double? YOY_3 { get; set; }
+        public List<VolumeData> VolumeDatas { get; set; }
         public double VTI { get; set; }
         public int Amount { get; set; }
     }

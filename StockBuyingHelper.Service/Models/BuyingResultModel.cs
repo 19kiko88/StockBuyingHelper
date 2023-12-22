@@ -26,6 +26,7 @@ namespace StockBuyingHelper.Service.Models
         public string RevenueInterval_3 { get; set; }
         public double? MOM_3 { get; set; }
         public double? YOY_3 { get; set; }
+        public List<VolumeData> VolumeDatas { get;set; }
         public double VTI { get; set; }
         public int Amount { get; set; }
     }

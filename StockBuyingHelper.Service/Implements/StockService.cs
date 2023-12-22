@@ -222,7 +222,14 @@ namespace StockBuyingHelper.Service.Implements
                             {
                                 StockId = item.StockId,
                                 StockName = item.StockName,
-                                VolumeInfo = deserializeData.data.list.Take(4).ToList()
+                                VolumeInfo = deserializeData.data.list.Take(7).Select(c => new VolumeData 
+                                {
+                                    TxDate = DateOnly.FromDateTime(Convert.ToDateTime(c.formattedDate)),
+                                    DealerDiffVolK = c.dealerDiffVolK,
+                                    InvestmentTrustDiffVolK = c.investmentTrustBuyVolK,
+                                    ForeignSellVolK = c.foreignSellVolK,
+                                    VolumeK = Convert.ToInt32(c.volumeK)
+                                }).ToList()
                             };
 
 
@@ -407,13 +414,14 @@ namespace StockBuyingHelper.Service.Implements
         /// <param name="peData">近四季EPS&PE資料</param>
         /// <param name="revenueData">近三個月營收MoM. YoY資料</param>
         /// <returns></returns>
-        public async Task<List<BuyingResultModel>> GetBuyingResult(List<StockInfoModel> stockData, List<VtiInfoModel> vtiData, List<PeInfoModel> peData, List<RevenueInfoModel> revenueData)
+        public async Task<List<BuyingResultModel>> GetBuyingResult(List<StockInfoModel> stockData, List<VtiInfoModel> vtiData, List<PeInfoModel> peData, List<RevenueInfoModel> revenueData, List<StockVolumeInfoModel> volumeData)
         {
             var res =
                 (from a in stockData
                  join b in vtiData on a.StockId equals b.StockId
                  join c in peData on a.StockId equals c.StockId
                  join d in revenueData on a.StockId equals d.StockId
+                 join e in volumeData on a.StockId equals e.StockId
                  select new BuyingResultModel
                  {
                      StockId = a.StockId,
@@ -434,18 +442,20 @@ namespace StockBuyingHelper.Service.Implements
                      RevenueInterval_3 = d.RevenueData.Count > 0 ? d.RevenueData[2].RevenueInterval : "",
                      MOM_3 = d.RevenueData.Count > 0 ? d.RevenueData[2].MOM : 0,
                      YOY_3 = d.RevenueData.Count > 0 ? d.RevenueData[2].YOY : 0,
+                     VolumeDatas = e.VolumeInfo,
                      VTI = b.VTI,
                      Amount = b.Amount
                  })
-                 .Where(c => 
-                    (c.Type == StockType.ESVUFR && 
-                    (
+                 .Where(c =>
+                    c.VolumeDatas.Take(3).Where(c => c.VolumeK > 500).Any() &&
+                    ((c.Type == StockType.ESVUFR 
+                    && (
                         c.EPS > 0
                         && c.PE < 25
                         && ((c.MOM_1 > 0 || c.MOM_2 > 0 || c.MOM_3 > 0) || (c.YOY_1 > 0 || (c.YOY_1 > 0 &&  (c.YOY_1 > c.YOY_2  && c.YOY_2 > c.YOY_3))))
                     )) 
                     || StockType.ETFs.Contains(c.Type)//ETF不管營收
-                 )
+                 ))
                  .OrderByDescending(o => o.Type).ThenByDescending(o => o.EPS)
                  .ToList();
 
@@ -454,7 +464,7 @@ namespace StockBuyingHelper.Service.Implements
              * 1.長期(1年)：VTI大於800 
              * 2.長期(近四季)：EPS > 0 && PE < 25
              * 3.中長期(近一季)：MoM不能都為負成長 || (最新(YoY)當月累計營收要比去年累計營收高 || YoY逐步轉正)
-             * 4.短期：交易量 > 300
+             * 4.短期：近3個交易日，有成交量超過500的紀錄
              */
 
             return res.ToList();

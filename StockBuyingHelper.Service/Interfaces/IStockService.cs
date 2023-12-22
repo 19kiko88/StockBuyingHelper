@@ -67,7 +67,7 @@ namespace StockBuyingHelper.Service.Interfaces
         /// <param name="peData">近四季EPS&PE資料</param>
         /// <param name="revenueData">近三個月營收MoM. YoY資料</param>
         /// <returns></returns>
-        public Task<List<BuyingResultModel>> GetBuyingResult(List<StockInfoModel> stockData, List<VtiInfoModel> vtiData, List<PeInfoModel> peData, List<RevenueInfoModel> revenueData);
+        public Task<List<BuyingResultModel>> GetBuyingResult(List<StockInfoModel> stockData, List<VtiInfoModel> vtiData, List<PeInfoModel> peData, List<RevenueInfoModel> revenueData, List<StockVolumeInfoModel> volumeData);
 
         [Obsolete("近四季EPS取得，改由GetPE從Yahoo Stock取得")]
         public Task<List<ObsoleteEpsInfoModel>> GetEPS(List<VtiInfoModel> data);

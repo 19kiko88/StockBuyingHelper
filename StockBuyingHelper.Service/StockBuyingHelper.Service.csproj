@@ -8,7 +8,9 @@
 
   <ItemGroup>
     <Compile Remove="Class1.cs" />
+    <Compile Remove="Dtos\BuyingResultDto.cs" />
     <Compile Remove="Dtos\DtoGetPrice.cs" />
+    <Compile Remove="Dtos\StockVolumeDto.cs" />
     <Compile Remove="Models\StockVolumneInfoModel.cs" />
   </ItemGroup>
 
