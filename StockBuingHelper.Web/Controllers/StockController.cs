@@ -24,7 +24,7 @@ namespace StockBuingHelper.Web.Controllers
             try
             {
                 var listStockInfo = await _stockService.GetStockList();
-                var listPrice = await _stockService.GetPrice();
+                var listPrice = await _stockService.GetPrice();                
                 var listHighLow = await _stockService.GetHighLowIn52Weeks(listPrice);
                 var listVti = await _stockService.GetVTI(listPrice, listHighLow, 800);
 
@@ -42,6 +42,7 @@ namespace StockBuingHelper.Web.Controllers
                      .ToList();
                 var listPe = await _stockService.GetPE(data, 25);
                 var listRevenue = await _stockService.GetRevenue(data, 25);
+                var listVolume = await _stockService.GetVolume(data, 25);
                 var buyingList = await _stockService.GetBuyingResult(listStockInfo, listVti, listPe, listRevenue);
                 
                 res = buyingList.Select((c, idx) => new BuyingResultDto

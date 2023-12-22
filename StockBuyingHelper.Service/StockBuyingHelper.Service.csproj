@@ -9,6 +9,7 @@
   <ItemGroup>
     <Compile Remove="Class1.cs" />
     <Compile Remove="Dtos\DtoGetPrice.cs" />
+    <Compile Remove="Models\StockVolumneInfoModel.cs" />
   </ItemGroup>
 
   <ItemGroup>

@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace StockBuyingHelper.Service.Models
 {
-    public class GetHighLowIn52WeeksInfoModel
+    public class StockHighLowIn52WeeksInfoModel
     {
         /// <summary>
         /// 代號

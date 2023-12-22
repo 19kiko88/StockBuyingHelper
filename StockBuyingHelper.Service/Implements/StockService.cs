@@ -115,9 +115,9 @@ namespace StockBuyingHelper.Service.Implements
         /// <param name="realTimeData">即時成交價</param>
         /// <param name="taskCount">多執行緒的Task數量</param>
         /// <returns></returns>
-        public async Task<List<GetHighLowIn52WeeksInfoModel>> GetHighLowIn52Weeks(List<StockInfoDto> realTimeData, int taskCount = 20)
+        public async Task<List<StockHighLowIn52WeeksInfoModel>> GetHighLowIn52Weeks(List<StockInfoDto> realTimeData, int taskCount = 20)
         {
-            var res = new List<GetHighLowIn52WeeksInfoModel>();
+            var res = new List<StockHighLowIn52WeeksInfoModel>();
             var httpClient = new HttpClient();
             //add header [User-Agent]，避免被檢查出爬蟲
             httpClient.DefaultRequestHeaders.Add("User-Agent", @"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36");
@@ -156,7 +156,7 @@ namespace StockBuyingHelper.Service.Implements
                                 //double.TryParse(td[17].TextContent, out var highPriceInCurrentYearPercentGap);
                                 //double.TryParse(td[19].TextContent, out var lowPriceInCurrentYearPercentGap);
 
-                                var data = new GetHighLowIn52WeeksInfoModel()
+                                var data = new StockHighLowIn52WeeksInfoModel()
                                 {
                                     StockId = td[0].TextContent.Trim(),
                                     StockName = td[1].TextContent.Trim(),
@@ -184,13 +184,70 @@ namespace StockBuyingHelper.Service.Implements
         }
 
         /// <summary>
+        /// 取得52周間最高 & 最低價(非最後收盤成交價)
+        /// </summary>
+        /// <param name="realTimeData">即時成交價</param>
+        /// <param name="taskCount">多執行緒的Task數量</param>
+        /// <returns></returns>
+        public async Task<List<StockVolumeInfoModel>> GetVolume(List<StockInfoDto> data, int taskCount = 20)
+        {
+            var res = new List<StockVolumeInfoModel>();
+            var httpClient = new HttpClient();
+            var tasks = new Task[taskCount];
+            //分群組 for 多執行緒分批執行
+            var vtiGroup = TaskUtils.GroupSplit(data, taskCount);
+
+            for (int i = 0; i < tasks.Length; i++)
+            {
+                var vtiData = vtiGroup[i];
+                tasks[i] = Task.Run(async () =>
+                {
+                    foreach (var item in vtiData)
+                    {
+                        var url = $"https://tw.stock.yahoo.com/_td-stock/api/resource/StockServices.tradesWithQuoteStats;limit=210;period=day;symbol={item.StockId}.TW?bkt=&device=desktop&ecma=modern&feature=enableGAMAds%2CenableGAMEdgeToEdge%2CenableEvPlayer&intl=tw&lang=zh-Hant-TW&partner=none&prid=5m2req5ioan5s&region=TW&site=finance&tz=Asia%2FTaipei&ver=1.2.2112&returnMeta=true";
+                        var resMessage = await httpClient.GetAsync(url);
+
+                        //檢查回應的伺服器狀態StatusCode是否是200 OK
+                        if (resMessage.StatusCode == System.Net.HttpStatusCode.OK)
+                        {
+
+                                var sr = await resMessage.Content.ReadAsStringAsync();
+
+                            /*
+                             *json => model web tool 
+                             *ref：https://json2csharp.com/
+                             */
+                            var deserializeData = JsonSerializer.Deserialize<StockVolumeAPIModel>(sr);
+                            var volumeInfo = new StockVolumeInfoModel()
+                            {
+                                StockId = item.StockId,
+                                StockName = item.StockName,
+                                VolumeInfo = deserializeData.data.list.Take(4).ToList()
+                            };
+
+
+
+                            lock (_lock)
+                            {
+                                res.Add(volumeInfo);
+                            }
+                        }
+                    }
+                });
+            }
+            Task.WaitAll(tasks);
+
+            return res;
+        }
+
+        /// <summary>
         /// 取得近52周最高最低價格區間內，目前價格離最高價還有多少百分比，並換算成vti係數(vti越高，表示離52周區間內最高點越近)
         /// </summary>
         /// <param name="priceData">即時價格資料</param>
         /// <param name="highLowData">取得52周間最高 & 最低價資料(非最終成交價)</param>
         /// <param name="amountLimit">vti篩選，vti值必須在多少以上</param>
         /// <returns></returns>
-        public async Task<List<VtiInfoModel>> GetVTI(List<StockInfoDto> priceData, List<GetHighLowIn52WeeksInfoModel> highLowData, int amountLimit = 0)
+        public async Task<List<VtiInfoModel>> GetVTI(List<StockInfoDto> priceData, List<StockHighLowIn52WeeksInfoModel> highLowData, int amountLimit = 0)
         {
             var listVTI =
                 (from a in priceData
