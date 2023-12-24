@@ -41,9 +41,9 @@ namespace StockBuingHelper.Web.Controllers
                      })
                      .Where(c => (queryEtfs && 1 == 1) || (!queryEtfs && c.Type == StockType.ESVUFR))
                      .ToList();
-                var listPe = await _stockService.GetPE(data, 25);
-                var listRevenue = await _stockService.GetRevenue(data, 25);
-                var listVolume = await _stockService.GetVolume(data, 25);
+                var listPe = await _stockService.GetPE(data);
+                var listRevenue = await _stockService.GetRevenue(data, 3);
+                var listVolume = await _stockService.GetVolume(data, 7);
                 var buyingList = await _stockService.GetBuyingResult(listStockInfo, listVti, listPe, listRevenue, listVolume);
                 
                 res = buyingList.Select((c, idx) => new BuyingResultDto
@@ -57,15 +57,7 @@ namespace StockBuingHelper.Web.Controllers
                     EpsInterval = c.EpsInterval,
                     EPS = c.EPS,
                     PE = c.PE,
-                    RevenueInterval_1 = c.RevenueInterval_1,
-                    MOM_1 = c.MOM_1,
-                    YOY_1 = c.YOY_1,
-                    RevenueInterval_2 = c.RevenueInterval_2,
-                    MOM_2 = c.MOM_2,
-                    YOY_2 = c.YOY_2,
-                    RevenueInterval_3 = c.RevenueInterval_3,
-                    MOM_3 = c.MOM_3,
-                    YOY_3 = c.YOY_3,
+                    RevenueDatas = c.RevenueDatas,
                     VolumeDatas = c.VolumeDatas,
                     VTI = c.VTI,
                     Amount = c.Amount

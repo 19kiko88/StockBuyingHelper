@@ -22,9 +22,16 @@ namespace StockBuyingHelper.Service.Interfaces
         /// <param name="realTimeData">即時成交價</param>
         /// <param name="taskCount">多執行緒的Task數量</param>
         /// <returns></returns>
-        public Task<List<StockHighLowIn52WeeksInfoModel>> GetHighLowIn52Weeks(List<StockInfoDto> realTimeData, int taskCount = 20);
+        public Task<List<StockHighLowIn52WeeksInfoModel>> GetHighLowIn52Weeks(List<StockInfoDto> realTimeData, int taskCount = 25);
 
-        public Task<List<StockVolumeInfoModel>> GetVolume(List<StockInfoDto> data, int taskCount = 20);
+        /// <summary>
+        /// 每日成交量資訊
+        /// </summary>
+        /// <param name="data">資料來源</param>
+        /// <param name="txDateCount">交易日(3~10)</param>
+        /// <param name="taskCount">多執行緒數量</param>
+        /// <returns></returns>
+        public Task<List<StockVolumeInfoModel>> GetVolume(List<StockInfoDto> data, int txDateCount = 10, int taskCount = 25);
 
         /// <summary>
         /// 取得即時價格
@@ -48,7 +55,7 @@ namespace StockBuyingHelper.Service.Interfaces
         /// <param name="data">資料來源</param>
         /// <param name="taskCount">多執行緒的Task數量</param>
         /// <returns></returns>
-        public Task<List<PeInfoModel>> GetPE(List<StockInfoDto> data, int taskCount = 20);
+        public Task<List<PeInfoModel>> GetPE(List<StockInfoDto> data, int taskCount = 25);
 
         /// <summary>
         /// 取得每月MoM. YoY增減趴數
@@ -56,7 +63,7 @@ namespace StockBuyingHelper.Service.Interfaces
         /// <param name="data">資料來源</param>
         /// <param name="taskCount">多執行緒的Task數量</param>
         /// <returns></returns>
-        public Task<List<RevenueInfoModel>> GetRevenue(List<StockInfoDto> data, int taskCount = 20);
+        public Task<List<RevenueInfoModel>> GetRevenue(List<StockInfoDto> data, int revenueMonthCount = 3, int taskCount = 25);
 
 
         /// <summary>

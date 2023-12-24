@@ -13,15 +13,7 @@ namespace StockBuingHelper.Web.Dtos
         public string EpsInterval { get; set; }
         public decimal EPS { get; set; }
         public double PE { get; set; }
-        public string RevenueInterval_1 { get; set; }
-        public double? MOM_1 { get; set; }
-        public double? YOY_1 { get; set; }
-        public string RevenueInterval_2 { get; set; }
-        public double? MOM_2 { get; set; }
-        public double? YOY_2 { get; set; }
-        public string RevenueInterval_3 { get; set; }
-        public double? MOM_3 { get; set; }
-        public double? YOY_3 { get; set; }
+        public List<Revenue> RevenueDatas { get; set; }
         public List<VolumeData> VolumeDatas { get; set; }
         public double VTI { get; set; }
         public int Amount { get; set; }

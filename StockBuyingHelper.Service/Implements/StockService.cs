@@ -115,7 +115,7 @@ namespace StockBuyingHelper.Service.Implements
         /// <param name="realTimeData">即時成交價</param>
         /// <param name="taskCount">多執行緒的Task數量</param>
         /// <returns></returns>
-        public async Task<List<StockHighLowIn52WeeksInfoModel>> GetHighLowIn52Weeks(List<StockInfoDto> realTimeData, int taskCount = 20)
+        public async Task<List<StockHighLowIn52WeeksInfoModel>> GetHighLowIn52Weeks(List<StockInfoDto> realTimeData, int taskCount = 25)
         {
             var res = new List<StockHighLowIn52WeeksInfoModel>();
             var httpClient = new HttpClient();
@@ -184,16 +184,27 @@ namespace StockBuyingHelper.Service.Implements
         }
 
         /// <summary>
-        /// 取得52周間最高 & 最低價(非最後收盤成交價)
+        /// 每日成交量資訊
         /// </summary>
-        /// <param name="realTimeData">即時成交價</param>
-        /// <param name="taskCount">多執行緒的Task數量</param>
+        /// <param name="data">資料來源</param>
+        /// <param name="txDateCount">交易日(3~10)</param>
+        /// <param name="taskCount">多執行緒數量</param>
         /// <returns></returns>
-        public async Task<List<StockVolumeInfoModel>> GetVolume(List<StockInfoDto> data, int taskCount = 20)
+        public async Task<List<StockVolumeInfoModel>> GetVolume(List<StockInfoDto> data, int txDateCount = 10, int taskCount = 25)
         {
             var res = new List<StockVolumeInfoModel>();
             var httpClient = new HttpClient();
             var tasks = new Task[taskCount];
+
+            if (txDateCount < 3)
+            {
+                txDateCount = 3;
+            }
+            if (txDateCount > 10)
+            {
+                txDateCount = 10;
+            }
+
             //分群組 for 多執行緒分批執行
             var vtiGroup = TaskUtils.GroupSplit(data, taskCount);
 
@@ -222,7 +233,7 @@ namespace StockBuyingHelper.Service.Implements
                             {
                                 StockId = item.StockId,
                                 StockName = item.StockName,
-                                VolumeInfo = deserializeData.data.list.Take(7).Select(c => new VolumeData 
+                                VolumeInfo = deserializeData.data.list.Take(txDateCount).Select(c => new VolumeData 
                                 {
                                     TxDate = DateOnly.FromDateTime(Convert.ToDateTime(c.formattedDate)),
                                     DealerDiffVolK = c.dealerDiffVolK,
@@ -294,7 +305,7 @@ namespace StockBuyingHelper.Service.Implements
         /// <param name="data">資料來源</param>
         /// <param name="taskCount">多執行緒的Task數量</param>
         /// <returns></returns>
-        public async Task<List<PeInfoModel>> GetPE(List<StockInfoDto> data, int taskCount = 20)
+        public async Task<List<PeInfoModel>> GetPE(List<StockInfoDto> data, int taskCount = 25)
         {
             var res = new List<PeInfoModel>();
             var httpClient = new HttpClient();
@@ -354,11 +365,20 @@ namespace StockBuyingHelper.Service.Implements
         /// <param name="data">資料來源</param>
         /// <param name="taskCount">多執行緒的Task數量</param>
         /// <returns></returns>
-        public async Task<List<RevenueInfoModel>> GetRevenue(List<StockInfoDto> data, int taskCount = 20)
+        public async Task<List<RevenueInfoModel>> GetRevenue(List<StockInfoDto> data, int revenueMonthCount = 3, int taskCount = 25)
         {
             var res = new List<RevenueInfoModel>();
             var httpClient = new HttpClient();
             var tasks = new Task[taskCount];
+
+            if (revenueMonthCount < 3)
+            {
+                revenueMonthCount = 3;
+            }
+            if (revenueMonthCount > 6)
+            {
+                revenueMonthCount = 6;
+            }
 
             //分群組 for 多執行緒分批執行
             var vtiGroup = TaskUtils.GroupSplit(data, taskCount);
@@ -381,7 +401,7 @@ namespace StockBuyingHelper.Service.Implements
                             var context = BrowsingContext.New(config);
                             var document = await context.OpenAsync(res => res.Content(sr));
 
-                            var listTR = document.QuerySelectorAll("#qsp-revenue-table .table-body-wrapper ul li[class*='List']").Take(4);
+                            var listTR = document.QuerySelectorAll("#qsp-revenue-table .table-body-wrapper ul li[class*='List']").Take(revenueMonthCount);
                             var revenueInfo = new RevenueInfoModel() { StockId = item.StockId, StockName = item.StockName, RevenueData = new List<Revenue>() };
                             foreach (var tr in listTR)
                             {
@@ -389,6 +409,7 @@ namespace StockBuyingHelper.Service.Implements
                                 {
                                     RevenueInterval = tr.QuerySelector("div").Children[0].TextContent,//YYYY/MM
                                     MOM = Convert.ToDouble(tr.QuerySelectorAll("span")[1].TextContent.Replace("%", "")),//MOM 
+                                    MonthYOY = Convert.ToDouble(tr.QuerySelectorAll("span")[3].TextContent.Replace("%", "")),//月營收年增率
                                     YOY = Convert.ToDouble(tr.QuerySelectorAll("span")[6].TextContent.Replace("%", ""))//YOY
                                 });
                             }
@@ -433,29 +454,21 @@ namespace StockBuyingHelper.Service.Implements
                      EpsInterval = c.EpsAcc4QInterval,
                      EPS = c.EpsAcc4Q,
                      PE = c.PE,
-                     RevenueInterval_1 = d.RevenueData.Count > 0 ? d.RevenueData[0].RevenueInterval : "",
-                     MOM_1 = d.RevenueData.Count > 0 ? d.RevenueData[0].MOM : 0,
-                     YOY_1 = d.RevenueData.Count > 0 ? d.RevenueData[0].YOY : 0,
-                     RevenueInterval_2 = d.RevenueData.Count > 0 ? d.RevenueData[1].RevenueInterval : "",
-                     MOM_2 = d.RevenueData.Count > 0 ? d.RevenueData[1].MOM : 0,
-                     YOY_2 = d.RevenueData.Count > 0 ? d.RevenueData[1].YOY : 0,
-                     RevenueInterval_3 = d.RevenueData.Count > 0 ? d.RevenueData[2].RevenueInterval : "",
-                     MOM_3 = d.RevenueData.Count > 0 ? d.RevenueData[2].MOM : 0,
-                     YOY_3 = d.RevenueData.Count > 0 ? d.RevenueData[2].YOY : 0,
+                     RevenueDatas = d.RevenueData,
                      VolumeDatas = e.VolumeInfo,
                      VTI = b.VTI,
                      Amount = b.Amount
                  })
                  .Where(c =>
-                    c.VolumeDatas.Take(3).Where(c => c.VolumeK > 500).Any() &&
-                    ((c.Type == StockType.ESVUFR 
-                    && (
-                        c.EPS > 0
-                        && c.PE < 25
-                        && ((c.MOM_1 > 0 || c.MOM_2 > 0 || c.MOM_3 > 0) || (c.YOY_1 > 0 || (c.YOY_1 > 0 &&  (c.YOY_1 > c.YOY_2  && c.YOY_2 > c.YOY_3))))
-                    )) 
-                    || StockType.ETFs.Contains(c.Type)//ETF不管營收
-                 ))
+                    c.VolumeDatas.Take(3).Where(c => c.VolumeK > 500).Any()
+                    && ((c.Type == StockType.ESVUFR 
+                        && (
+                            c.EPS > 0
+                            && c.PE < 25
+                            && ((c.RevenueDatas[0].MOM > 0 || c.RevenueDatas[1].MOM > 0 || c.RevenueDatas[2].MOM > 0) || (c.RevenueDatas[0].YOY > 0 || (c.RevenueDatas[0].YOY > 0 && (c.RevenueDatas[0].YOY > c.RevenueDatas[1].YOY && c.RevenueDatas[1].YOY > c.RevenueDatas[2].YOY))))
+                        )) 
+                        || StockType.ETFs.Contains(c.Type))//ETF不管營收
+                 )
                  .OrderByDescending(o => o.Type).ThenByDescending(o => o.EPS)
                  .ToList();
 
