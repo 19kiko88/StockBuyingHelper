@@ -466,11 +466,12 @@ namespace StockBuyingHelper.Service.Implements
                             c.EPS > 0
                             && c.PE < 25
                             && (
-                                    (c.RevenueDatas[0].MOM > 0 || c.RevenueDatas[1].MOM > 0 || c.RevenueDatas[2].MOM > 0) 
+                                    //(c.RevenueDatas[0].MOM > 0 || c.RevenueDatas[1].MOM > 0 || c.RevenueDatas[2].MOM > 0) 
+                                    c.RevenueDatas.Take(3).Where(c => c.MOM > 2).Count() >= 2
                                     || 
                                     (
-                                        c.RevenueDatas[0].YOY > 0 || 
-                                        (c.RevenueDatas[0].YOY > 0 && (c.RevenueDatas[0].YOY > c.RevenueDatas[1].YOY && c.RevenueDatas[1].YOY > c.RevenueDatas[2].YOY))
+                                        c.RevenueDatas[0].YOY > 0 //|| 
+                                        //(c.RevenueDatas[0].YOY > 0 && (c.RevenueDatas[0].YOY > c.RevenueDatas[1].YOY && c.RevenueDatas[1].YOY > c.RevenueDatas[2].YOY))
                                     )
                                 )
                             )
@@ -484,7 +485,7 @@ namespace StockBuyingHelper.Service.Implements
              * 選股條件：
              * 1.長期(1年)：VTI大於800 
              * 2.長期(近四季)：EPS > 0 && PE < 25
-             * 3.中長期(近一季)：MoM不能都為負成長 || (最新(YoY)當月累計營收要比去年累計營收高 || YoY逐步轉正)
+             * 3.中長期(近一季)：MoM至少有兩個月為正 || (最新(YoY)當月累計營收要比去年累計營收高 || YoY逐步轉正)
              * 4.短期：近3個交易日，有成交量超過500的紀錄
              */
 
