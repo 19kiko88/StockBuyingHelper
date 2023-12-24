@@ -465,8 +465,16 @@ namespace StockBuyingHelper.Service.Implements
                         && (
                             c.EPS > 0
                             && c.PE < 25
-                            && ((c.RevenueDatas[0].MOM > 0 || c.RevenueDatas[1].MOM > 0 || c.RevenueDatas[2].MOM > 0) || (c.RevenueDatas[0].YOY > 0 || (c.RevenueDatas[0].YOY > 0 && (c.RevenueDatas[0].YOY > c.RevenueDatas[1].YOY && c.RevenueDatas[1].YOY > c.RevenueDatas[2].YOY))))
-                        )) 
+                            && (
+                                    (c.RevenueDatas[0].MOM > 0 || c.RevenueDatas[1].MOM > 0 || c.RevenueDatas[2].MOM > 0) 
+                                    || 
+                                    (
+                                        c.RevenueDatas[0].YOY > 0 || 
+                                        (c.RevenueDatas[0].YOY > 0 && (c.RevenueDatas[0].YOY > c.RevenueDatas[1].YOY && c.RevenueDatas[1].YOY > c.RevenueDatas[2].YOY))
+                                    )
+                                )
+                            )
+                        ) 
                         || StockType.ETFs.Contains(c.Type))//ETF不管營收
                  )
                  .OrderByDescending(o => o.Type).ThenByDescending(o => o.EPS)
