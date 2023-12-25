@@ -1,0 +1,156 @@
+html, body {
+    background-color: #d2e7ef;
+  }
+
+body {
+    display: block;
+    /* line-height: 1; */
+}
+
+/* html, body, input, textarea, option {
+    font-family: "Segoe UI", Helvetica Neue, Arial, "微軟正黑體";
+    *font-family: "微軟正黑體", Helvetica Neue, Arial;
+    font-size: 15px;
+} */
+
+/* html, body, div, span, applet, object, iframe, h1, h2, h3, h4, h5, h6, p, blockquote, pre, a, abbr, acronym, address, big, cite, code, del, dfn, em, img, ins, kbd, q, s, samp, small, strike, strong, sub, sup, tt, var, b, u, i, center, dl, dt, dd, ol, ul, li, fieldset, form, label, legend, table, caption, tbody, tfoot, thead, tr, th, td, article, aside, canvas, details, embed, figure, figcaption, footer, header, hgroup, menu, nav, output, ruby, section, summary, time, mark, audio, video {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    font-size: 100%;
+    font: inherit;
+    vertical-align: baseline;
+} */
+
+article, aside, details, figcaption, figure, footer, header, hgroup, menu, nav, section {
+    display: block;
+}
+
+.wrap {
+    /* width: 1560px; */
+    margin: 0 auto;
+}
+
+
+/*****article scope start*****/
+article {
+    position: relative;
+    min-height: calc(100vh - 80px);        
+    margin-top: 10px !important;    
+    padding-bottom: 50px !important;
+    background-color: #d2e7ef;
+}
+
+article .wrap{
+    padding : 5px 30px;
+} 
+
+article section {
+    position: relative;
+    overflow: hidden;
+    float: none;
+    clear: both;
+}
+
+.panel {
+    margin-bottom: 14px;
+    background-color: #fff;
+    border: 0px;
+    border-radius: 5px;
+    -webkit-box-shadow: 0 0px 12px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 0px 12px rgba(0, 0, 0, 0.15);
+}
+
+.panel-default {
+    border-color: #ccc;
+}
+
+.marg10-t {
+    margin-top: 10px !important;
+}
+
+section.panel-article {
+    overflow: inherit;
+}
+
+.panel-heading {
+    /* padding: 10px 15px; */
+    border-bottom: 1px solid transparent;
+    border-top-right-radius: 5px;
+    border-top-left-radius: 5px;
+}
+
+.panel-default .panel-heading {
+    color: #333333;
+    /* background-color: #fff; */
+    border-color: #ccc;
+}
+
+section.panel-article .panel-heading, section.panel-article .panel-header, section.panel-article .panel-footer {
+    padding: 4px 6px;
+    background-color: #fff;
+    display: -webkit-box;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-box-pack: justify;
+    -ms-flex-pack: justify;
+    justify-content: space-between;
+    -webkit-box-align: center;
+    -ms-flex-align: center;
+    align-items: center;
+}
+
+.panel-title {
+    margin-top: 0;
+    margin-bottom: 0;
+    font-size: 16px;
+    color: inherit;
+}
+
+.panel-heading .panel-title, .panel-header .panel-title {
+    background-color: transparent;
+    font-weight: 600;
+}
+
+section.panel-article .panel-title {
+    display: inline-block;
+    padding: 6px 0;
+    white-space: nowrap;
+}
+
+.panel-heading i.circle, .panel-header i.circle {
+    display: inline-block;
+    width: 26px;
+    height: 26px;
+    line-height: 26px;
+    border-radius: 50%;
+    text-align: center;
+    margin-top: -5px;
+    margin-bottom: -5px;
+    font-size: 16px;
+    background-color: #139cd8;
+}
+
+section.panel-article .panel-title i {
+    margin-right: 6px;
+}
+
+.panel-body {
+    color: #000;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.panel-body {
+    position: relative;
+}
+
+section.panel-article .panel-body {
+    padding: 6px;
+}
+
+.article-container .card-body{
+    padding: 3px 5px;
+}
+
+/*****article scope end*****/

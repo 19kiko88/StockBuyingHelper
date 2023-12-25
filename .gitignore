@@ -426,3 +426,4 @@ bin
 bin
 obj
 .vs
+ignore_files
