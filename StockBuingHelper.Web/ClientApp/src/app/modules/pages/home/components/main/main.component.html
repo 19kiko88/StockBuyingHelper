@@ -9,11 +9,11 @@
       <div class="article-container">
   
         <div class="container">
-            <form>
+            <form [formGroup]="form" (ngSubmit)="submit()">
                 <div class="row">
                     <div class="col mb6">
                       <label for="exampleInputEmail1" class="form-label">Email address</label>
-                      <input type="email" class="form-control" id="exampleInputEmail1" aria-describedby="emailHelp">
+                      <input type="email" class="form-control" id="exampleInputEmail1" formControlName="ggg" aria-describedby="emailHelp">
                     </div>
                     <div class="col mb6">
                       <label for="exampleInputEmail1" class="form-label">Email address</label>
@@ -43,7 +43,7 @@
                         </div>                    
                   </div>
 
-                <button type="submit" class="btn btn-primary">送出查詢</button>
+                <button type="submit" class="btn btn-primary" >送出查詢</button>
               </form>            
           </div>
         
