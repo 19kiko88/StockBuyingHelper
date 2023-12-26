@@ -402,10 +402,10 @@ namespace StockBuyingHelper.Service.Implements
                             var document = await context.OpenAsync(res => res.Content(sr));
 
                             var listTR = document.QuerySelectorAll("#qsp-revenue-table .table-body-wrapper ul li[class*='List']").Take(revenueMonthCount);
-                            var revenueInfo = new RevenueInfoModel() { StockId = item.StockId, StockName = item.StockName, RevenueData = new List<Revenue>() };
+                            var revenueInfo = new RevenueInfoModel() { StockId = item.StockId, StockName = item.StockName, RevenueData = new List<RevenueData>() };
                             foreach (var tr in listTR)
                             {
-                                revenueInfo.RevenueData.Add(new Revenue()
+                                revenueInfo.RevenueData.Add(new RevenueData()
                                 {
                                     RevenueInterval = tr.QuerySelector("div").Children[0].TextContent,//YYYY/MM
                                     MOM = Convert.ToDouble(tr.QuerySelectorAll("span")[1].TextContent.Replace("%", "")),//MOM 

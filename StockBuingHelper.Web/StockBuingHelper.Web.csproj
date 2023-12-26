@@ -7,11 +7,19 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Models\**" />
+    <Content Remove="Models\**" />
+    <EmbeddedResource Remove="Models\**" />
+    <None Remove="Models\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Compile Remove="Controllers\StockBuyingHelperController.cs" />
     <Compile Remove="WeatherForecast.cs" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\StockBuyingHelper.Models\StockBuyingHelper.Models.csproj" />
     <ProjectReference Include="..\StockBuyingHelper.Service\StockBuyingHelper.Service.csproj" />
   </ItemGroup>
 

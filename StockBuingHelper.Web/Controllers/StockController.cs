@@ -1,8 +1,10 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using StockBuingHelper.Web.Dtos;
+using StockBuyingHelper.Models.Models;
 using StockBuyingHelper.Service.Dtos;
 using StockBuyingHelper.Service.Interfaces;
 using StockBuyingHelper.Service.Models;
+using System.Diagnostics;
 
 namespace StockBuingHelper.Web.Controllers
 {
@@ -19,16 +21,17 @@ namespace StockBuingHelper.Web.Controllers
         }
 
         [HttpGet]
-        public async Task<List<BuyingResultDto>> GetVtiData([FromQuery] bool queryEtfs = false)
+        public async Task<Result<List<BuyingResultDto>>> GetVtiData([FromQuery] bool queryEtfs = false)
         {
-            var res = new List<BuyingResultDto>();
+            var sw = new Stopwatch();
+            var res = new Result<List<BuyingResultDto>>();
             try
             {
+                sw.Start();
                 var listStockInfo = await _stockService.GetStockList();
                 var listPrice = await _stockService.GetPrice();                
                 var listHighLow = await _stockService.GetHighLowIn52Weeks(listPrice);
                 var listVti = await _stockService.GetVTI(listPrice, listHighLow, 800);
-
                 var data =
                     (from a in listStockInfo
                      join b in listVti on a.StockId equals b.StockId
@@ -46,7 +49,7 @@ namespace StockBuingHelper.Web.Controllers
                 var listVolume = await _stockService.GetVolume(data, 7);
                 var buyingList = await _stockService.GetBuyingResult(listStockInfo, listVti, listPe, listRevenue, listVolume);
                 
-                res = buyingList.Select((c, idx) => new BuyingResultDto
+                res.Content = buyingList.Select((c, idx) => new BuyingResultDto
                 {
                     Sn = (idx + 1).ToString(),
                     StockId = c.StockId,
@@ -63,11 +66,16 @@ namespace StockBuingHelper.Web.Controllers
                     Amount = c.Amount
                 }).ToList();
 
+                res.Success = true;
             }
             catch (Exception ex)
             {
-                var msg = ex.Message;
-            }   
+                //res.Exception = ex;
+                res.Message = ex.Message;
+            }
+
+            sw.Start();
+            res.Message += $"Run time：{Math.Round(Convert.ToDouble(sw.ElapsedMilliseconds / 1000), 2)}(s)。";
 
             return res;
         }

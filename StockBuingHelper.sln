@@ -3,9 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.6.33815.320
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StockBuingHelper.Web", "StockBuingHelper.Web\StockBuingHelper.Web.csproj", "{F2C3A16E-960F-460C-8C1C-17AAFA3BC18F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StockBuingHelper.Web", "StockBuingHelper.Web\StockBuingHelper.Web.csproj", "{F2C3A16E-960F-460C-8C1C-17AAFA3BC18F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StockBuyingHelper.Service", "StockBuyingHelper.Service\StockBuyingHelper.Service.csproj", "{13181EF0-E7CD-441E-8680-D4AE727BE797}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StockBuyingHelper.Service", "StockBuyingHelper.Service\StockBuyingHelper.Service.csproj", "{13181EF0-E7CD-441E-8680-D4AE727BE797}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StockBuyingHelper.Models", "StockBuyingHelper.Models\StockBuyingHelper.Models.csproj", "{FB076BC2-0498-45C5-90EA-6C157A71FCFE}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +23,10 @@ Global
 		{13181EF0-E7CD-441E-8680-D4AE727BE797}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{13181EF0-E7CD-441E-8680-D4AE727BE797}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{13181EF0-E7CD-441E-8680-D4AE727BE797}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FB076BC2-0498-45C5-90EA-6C157A71FCFE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FB076BC2-0498-45C5-90EA-6C157A71FCFE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FB076BC2-0498-45C5-90EA-6C157A71FCFE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FB076BC2-0498-45C5-90EA-6C157A71FCFE}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

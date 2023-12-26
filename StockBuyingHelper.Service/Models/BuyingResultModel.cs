@@ -17,7 +17,7 @@ namespace StockBuyingHelper.Service.Models
         public string EpsInterval { get; set; }
         public decimal EPS { get; set; }
         public double PE { get; set; }
-        public List<Revenue> RevenueDatas { get; set; }
+        public List<RevenueData> RevenueDatas { get; set; }
         public List<VolumeData> VolumeDatas { get;set; }
         public double VTI { get; set; }
         public int Amount { get; set; }

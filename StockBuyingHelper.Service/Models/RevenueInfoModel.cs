@@ -10,10 +10,10 @@ namespace StockBuyingHelper.Service.Models
     {
         public string StockId { get; set; }
         public string StockName { get; set; }
-        public List<Revenue> RevenueData { get; set; }
+        public List<RevenueData> RevenueData { get; set; }
     }
 
-    public class Revenue
+    public class RevenueData
     {
         public string RevenueInterval { get; set; }
         public double MOM { get; set; }
