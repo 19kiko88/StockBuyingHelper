@@ -194,7 +194,6 @@ namespace StockBuyingHelper.Service.Implements
         {
             var res = new List<StockVolumeInfoModel>();
             var httpClient = new HttpClient();
-            var tasks = new Task[taskCount];
 
             if (txDateCount < 3)
             {
@@ -206,11 +205,12 @@ namespace StockBuyingHelper.Service.Implements
             }
 
             //分群組 for 多執行緒分批執行
-            var vtiGroup = TaskUtils.GroupSplit(data, taskCount);
+            var groups = TaskUtils.GroupSplit(data, taskCount);
+            var tasks = new Task[groups.Length];
 
-            for (int i = 0; i < tasks.Length; i++)
+            for (int i = 0; i < groups.Length; i++)
             {
-                var vtiData = vtiGroup[i];
+                var vtiData = groups[i];
                 tasks[i] = Task.Run(async () =>
                 {
                     foreach (var item in vtiData)
@@ -265,18 +265,25 @@ namespace StockBuyingHelper.Service.Implements
         /// <param name="highLowData">取得52周間最高 & 最低價資料(非最終成交價)</param>
         /// <param name="amountLimit">vti篩選，vti值必須在多少以上</param>
         /// <returns></returns>
-        public async Task<List<VtiInfoModel>> GetVTI(List<StockInfoDto> priceData, List<StockHighLowIn52WeeksInfoModel> highLowData, int amountLimit = 0)
+        public async Task<List<VtiInfoModel>> GetVTI(List<StockInfoDto> priceData, List<StockHighLowIn52WeeksInfoModel> highLowData, string specificStockId = "", int amountLimit = 0)
         {
-            var listVTI =
+            var vtiData =
                 (from a in priceData
-                join b in highLowData on a.StockId equals b.StockId
-                select new VtiInfoModel {
-                    StockId = a.StockId,
-                    StockName = a.StockName,
-                    Price = a.Price,
-                    HighIn52 = b.HighPriceInCurrentYear,
-                    LowIn52 = b.LowPriceInCurrentYear
-                }).ToList();
+                 join b in highLowData on a.StockId equals b.StockId
+                 select new VtiInfoModel
+                 {
+                     StockId = a.StockId,
+                     StockName = a.StockName,
+                     Price = a.Price,
+                     HighIn52 = b.HighPriceInCurrentYear,
+                     LowIn52 = b.LowPriceInCurrentYear
+                 }).AsEnumerable();
+
+            if (!string.IsNullOrEmpty(specificStockId))
+            {
+                vtiData = vtiData.Where(c => c.StockId == specificStockId).AsEnumerable();
+            }
+            var listVTI = vtiData.ToList();
 
             foreach (var item in listVTI)
             {
@@ -290,7 +297,7 @@ namespace StockBuyingHelper.Service.Implements
                 item.Amount = Convert.ToInt32(Math.Round(item.VTI, 2) * 1000);
             }
 
-            if (amountLimit > 0)
+            if (string.IsNullOrEmpty(specificStockId) && amountLimit > 0)
             {
                 listVTI = listVTI.Where(c => c.Amount > amountLimit).ToList();
             }
@@ -309,14 +316,14 @@ namespace StockBuyingHelper.Service.Implements
         {
             var res = new List<PeInfoModel>();
             var httpClient = new HttpClient();
-            var tasks = new Task[taskCount];
 
             //分群組 for 多執行緒分批執行
-            var vtiGroup = TaskUtils.GroupSplit(data, taskCount);
+            var groups = TaskUtils.GroupSplit(data, taskCount);
+            var tasks = new Task[groups.Length];
 
-            for (int i = 0; i < tasks.Length; i++)
+            for (int i = 0; i < groups.Length; i++)
             {
-                var vtiData = vtiGroup[i];
+                var vtiData = groups[i];
                 tasks[i] = Task.Run(async () =>
                 {
                     foreach (var item in vtiData)
@@ -369,7 +376,6 @@ namespace StockBuyingHelper.Service.Implements
         {
             var res = new List<RevenueInfoModel>();
             var httpClient = new HttpClient();
-            var tasks = new Task[taskCount];
 
             if (revenueMonthCount < 3)
             {
@@ -381,11 +387,12 @@ namespace StockBuyingHelper.Service.Implements
             }
 
             //分群組 for 多執行緒分批執行
-            var vtiGroup = TaskUtils.GroupSplit(data, taskCount);
+            var groups = TaskUtils.GroupSplit(data, taskCount);
+            var tasks = new Task[groups.Length];
 
-            for (int i = 0; i < tasks.Length; i++)
+            for (int i = 0; i < groups.Length; i++)
             {
-                var vtiData = vtiGroup[i];
+                var vtiData = groups[i];
                 tasks[i] = Task.Run(async () =>
                 {
                     foreach (var item in vtiData)
@@ -435,9 +442,9 @@ namespace StockBuyingHelper.Service.Implements
         /// <param name="peData">近四季EPS&PE資料</param>
         /// <param name="revenueData">近三個月營收MoM. YoY資料</param>
         /// <returns></returns>
-        public async Task<List<BuyingResultModel>> GetBuyingResult(List<StockInfoModel> stockData, List<VtiInfoModel> vtiData, List<PeInfoModel> peData, List<RevenueInfoModel> revenueData, List<StockVolumeInfoModel> volumeData)
+        public async Task<List<BuyingResultModel>> GetBuyingResult(List<StockInfoModel> stockData, List<VtiInfoModel> vtiData, List<PeInfoModel> peData, List<RevenueInfoModel> revenueData, List<StockVolumeInfoModel> volumeData, string specificStockId = "")
         {
-            var res =
+            var data =
                 (from a in stockData
                  join b in vtiData on a.StockId equals b.StockId
                  join c in peData on a.StockId equals c.StockId
@@ -458,26 +465,32 @@ namespace StockBuyingHelper.Service.Implements
                      VolumeDatas = e.VolumeInfo,
                      VTI = b.VTI,
                      Amount = b.Amount
-                 })
-                 .Where(c =>
+                 }).AsEnumerable();
+
+            if (string.IsNullOrEmpty(specificStockId))
+            {
+                data = data.Where(c =>
                     c.VolumeDatas.Take(3).Where(c => c.volumeK > 500).Any()
-                    && ((c.Type == StockType.ESVUFR 
+                    && ((c.Type == StockType.ESVUFR
                         && (
                             c.EPS > 0
                             && c.PE < 25
                             && (
                                     //(c.RevenueDatas[0].MOM > 0 || c.RevenueDatas[1].MOM > 0 || c.RevenueDatas[2].MOM > 0) 
                                     c.RevenueDatas.Take(3).Where(c => c.mom > 2).Count() >= 2
-                                    || 
+                                    ||
                                     (
                                         c.RevenueDatas[0].yoy > 0 //|| 
-                                        //(c.RevenueDatas[0].YOY > 0 && (c.RevenueDatas[0].YOY > c.RevenueDatas[1].YOY && c.RevenueDatas[1].YOY > c.RevenueDatas[2].YOY))
+                                                                  //(c.RevenueDatas[0].YOY > 0 && (c.RevenueDatas[0].YOY > c.RevenueDatas[1].YOY && c.RevenueDatas[1].YOY > c.RevenueDatas[2].YOY))
                                     )
                                 )
                             )
-                        ) 
+                        )
                         || StockType.ETFs.Contains(c.Type))//ETF不管營收
-                 )
+                 ).AsEnumerable();
+            }
+
+            var res = data
                  .OrderByDescending(o => o.Type).ThenByDescending(o => o.EPS)
                  .ToList();
 
@@ -508,7 +521,7 @@ namespace StockBuyingHelper.Service.Implements
             //分群組 for 多執行緒分批執行
             var vtiGroup = TaskUtils.GroupSplit(data, taskCount);
 
-            for (int i = 0; i < tasks.Length; i++)
+            for (int i = 0; i < vtiGroup.Length; i++)
             {
                 var vtiData = vtiGroup[i];
                 tasks[i] = Task.Run(async () =>

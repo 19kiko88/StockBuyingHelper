@@ -43,6 +43,7 @@ namespace StockBuyingHelper.Service.Utility
                     var qq = ex.Message;
                 }
             }
+            group = group.Where(c => c != null && c.Count > 0).ToArray();
 
             return group;
         }

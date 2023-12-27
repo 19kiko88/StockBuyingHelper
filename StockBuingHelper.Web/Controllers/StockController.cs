@@ -32,7 +32,7 @@ namespace StockBuingHelper.Web.Controllers
                 var listStockInfo = await _stockService.GetStockList();
                 var listPrice = await _stockService.GetPrice();                
                 var listHighLow = await _stockService.GetHighLowIn52Weeks(listPrice);
-                var listVti = await _stockService.GetVTI(listPrice, listHighLow, reqData.vtiIndex);
+                var listVti = await _stockService.GetVTI(listPrice, listHighLow, reqData.specificStockId, reqData.vtiIndex);
                 var data =
                     (from a in listStockInfo
                      join b in listVti on a.StockId equals b.StockId
@@ -43,14 +43,14 @@ namespace StockBuingHelper.Web.Controllers
                          Price = b.Price,
                          Type = a.CFICode
                      })
-                     .Where(c => (reqData.queryEtfs && 1 == 1) || (!reqData.queryEtfs && c.Type == StockType.ESVUFR))
+                     .Where(c => ((reqData.queryEtfs && 1 == 1) || (!reqData.queryEtfs && c.Type == StockType.ESVUFR)))
                      .ToList();
                 var listPe = await _stockService.GetPE(data);
                 Thread.Sleep(6000);//間隔6秒，避免被誤認攻擊
                 var listRevenue = await _stockService.GetRevenue(data, 3);
                 Thread.Sleep(6000);//間隔6秒，避免被誤認攻擊
                 var listVolume = await _stockService.GetVolume(data, 7);
-                var buyingList = await _stockService.GetBuyingResult(listStockInfo, listVti, listPe, listRevenue, listVolume);
+                var buyingList = await _stockService.GetBuyingResult(listStockInfo, listVti, listPe, listRevenue, listVolume, reqData.specificStockId);
                 
                 res.Content = buyingList.Select((c, idx) => new BuyingResultDto
                 {

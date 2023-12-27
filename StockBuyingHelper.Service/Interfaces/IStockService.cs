@@ -46,7 +46,7 @@ namespace StockBuyingHelper.Service.Interfaces
         /// <param name="highLowData">取得52周間最高 & 最低價資料(非最終成交價)</param>
         /// <param name="amountLimit">vti篩選，vti值必須在多少以上</param>
         /// <returns></returns>
-        public Task<List<VtiInfoModel>> GetVTI(List<StockInfoDto> priceData, List<StockHighLowIn52WeeksInfoModel> highLowData, int amountLimit = 0);
+        public Task<List<VtiInfoModel>> GetVTI(List<StockInfoDto> priceData, List<StockHighLowIn52WeeksInfoModel> highLowData, string specificStockId = "", int amountLimit = 0);
 
         /// <summary>
         /// 取得本益比(PE) & 近四季EPS
@@ -74,7 +74,7 @@ namespace StockBuyingHelper.Service.Interfaces
         /// <param name="peData">近四季EPS&PE資料</param>
         /// <param name="revenueData">近三個月營收MoM. YoY資料</param>
         /// <returns></returns>
-        public Task<List<BuyingResultModel>> GetBuyingResult(List<StockInfoModel> stockData, List<VtiInfoModel> vtiData, List<PeInfoModel> peData, List<RevenueInfoModel> revenueData, List<StockVolumeInfoModel> volumeData);
+        public Task<List<BuyingResultModel>> GetBuyingResult(List<StockInfoModel> stockData, List<VtiInfoModel> vtiData, List<PeInfoModel> peData, List<RevenueInfoModel> revenueData, List<StockVolumeInfoModel> volumeData, string specificStockId = "");
 
         [Obsolete("近四季EPS取得，改由GetPE從Yahoo Stock取得")]
         public Task<List<ObsoleteEpsInfoModel>> GetEPS(List<VtiInfoModel> data);
