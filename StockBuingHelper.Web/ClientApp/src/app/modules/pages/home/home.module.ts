@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { MainComponent } from './components/main/main.component';
 import { TestPageComponent } from './components/test-page/test-page.component';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { SharedModule } from '../../shared/shared.module';
 
 @NgModule({
   declarations: [
@@ -10,9 +11,9 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
     TestPageComponent,    
   ],
   imports: [
-    CommonModule,
+    CommonModule,    
     FormsModule, 
-    ReactiveFormsModule,
+    ReactiveFormsModule  
   ],
   exports:[
     MainComponent,

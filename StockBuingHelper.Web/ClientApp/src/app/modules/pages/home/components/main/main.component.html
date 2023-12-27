@@ -9,41 +9,63 @@
       <div class="article-container">
   
         <div class="container">
-            <form [formGroup]="form" (ngSubmit)="submit()">
-                <div class="row">
-                    <div class="col mb6">
-                      <label for="exampleInputEmail1" class="form-label">Email address</label>
-                      <input type="email" class="form-control" id="exampleInputEmail1" formControlName="ggg" aria-describedby="emailHelp">
-                    </div>
-                    <div class="col mb6">
-                      <label for="exampleInputEmail1" class="form-label">Email address</label>
-                      <input type="email" class="form-control" id="exampleInputEmail1" aria-describedby="emailHelp">
-                    </div>
-                  </div>
+            <form class="row g-3" [formGroup]="form" (ngSubmit)="submit()">
 
-                  <div class="row">
-                    <div class="col mb6">
-                      <label for="exampleInputEmail1" class="form-label">Email address</label>
-                      <input type="email" class="form-control" id="exampleInputEmail1" aria-describedby="emailHelp">
-                    </div>
-                    <div class="col mb6">
-                      <label for="exampleInputEmail1" class="form-label">Email address</label>
-                      <input type="email" class="form-control" id="exampleInputEmail1" aria-describedby="emailHelp">
-                    </div>
-                  </div>                  
+              <!-- <div class="col-md-6">
+                <label for="inputEmail4" class="form-label">Email</label>
+                <input type="email" class="form-control" id="inputEmail4">
+              </div>
+              <div class="col-md-6">
+                <label for="inputPassword4" class="form-label">Password</label>
+                <input type="password" class="form-control" id="inputPassword4">
+              </div>
+              <div class="col-12">
+                <label for="inputAddress" class="form-label">Address</label>
+                <input type="text" class="form-control" id="inputAddress" placeholder="1234 Main St">
+              </div>
+              <div class="col-12">
+                <label for="inputAddress2" class="form-label">Address 2</label>
+                <input type="text" class="form-control" id="inputAddress2" placeholder="Apartment, studio, or floor">
+              </div>
+              <div class="col-md-6">
+                <label for="inputCity" class="form-label">City</label>
+                <input type="text" class="form-control" id="inputCity">
+              </div>
+              <div class="col-md-4">
+                <label for="inputState" class="form-label">State</label>
+                <select id="inputState" class="form-select">
+                  <option selected>Choose...</option>
+                  <option>...</option>
+                </select>
+              </div>
+              <div class="col-md-2">
+                <label for="inputZip" class="form-label">Zip</label>
+                <input type="text" class="form-control" id="inputZip">
+              </div> -->
 
-                  <div class="row">
-                    <div class="col mb6">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" value="" id="flexCheckIndeterminate">
-                            <label class="form-check-label" for="flexCheckIndeterminate">
-                              only 0050
-                            </label>
-                          </div>
-                        </div>                    
-                  </div>
+              <div class="col-3">
+                <label for="inputAddress2" class="form-label">個股查詢</label>
+                <input formControlName="stockId" type="text" class="form-control" placeholder="股票代碼">
+              </div>              
 
-                <button type="submit" class="btn btn-primary" >送出查詢</button>
+              <div class="col-12">
+                  <label for="customRange3" class="form-label">VTI指數({{vtiRange}})</label>
+                  <input formControlName="vtiRange" [(ngModel)]="vtiRange" type="range" class="form-range" min="0" max="1000" step="10">
+              </div>
+
+              <div class="col-12">
+                <div class="form-check">
+                  <input formControlName="etfDisplay" class="form-check-input" type="checkbox">
+                  <label class="form-check-label" for="gridCheck">
+                    顯示ETF資料
+                  </label>
+                </div>
+              </div>
+
+              <div class="col-12">
+                <button type="submit" class="btn btn-primary">送出查詢</button>
+              </div>
+              
               </form>            
           </div>
         
@@ -57,8 +79,8 @@
   
 
   
-    
-      <!-- <pre>Active: {{ active }}</pre> -->
+    {{vtiResult|json}}
+
     </div>
   </div>
   
