@@ -235,11 +235,11 @@ namespace StockBuyingHelper.Service.Implements
                                 StockName = item.StockName,
                                 VolumeInfo = deserializeData.data.list.Take(txDateCount).Select(c => new VolumeData 
                                 {
-                                    TxDate = DateOnly.FromDateTime(Convert.ToDateTime(c.formattedDate)),
-                                    DealerDiffVolK = c.dealerDiffVolK,
-                                    InvestmentTrustDiffVolK = c.investmentTrustBuyVolK,
-                                    ForeignSellVolK = c.foreignSellVolK,
-                                    VolumeK = Convert.ToInt32(c.volumeK)
+                                    txDate = DateOnly.FromDateTime(Convert.ToDateTime(c.formattedDate)),
+                                    dealerDiffVolK = c.dealerDiffVolK,
+                                    investmentTrustDiffVolK = c.investmentTrustBuyVolK,
+                                    foreignSellVolK = c.foreignSellVolK,
+                                    volumeK = Convert.ToInt32(c.volumeK)
                                 }).ToList()
                             };
 
@@ -407,10 +407,10 @@ namespace StockBuyingHelper.Service.Implements
                             {
                                 revenueInfo.RevenueData.Add(new RevenueData()
                                 {
-                                    RevenueInterval = tr.QuerySelector("div").Children[0].TextContent,//YYYY/MM
-                                    MOM = Convert.ToDouble(tr.QuerySelectorAll("span")[1].TextContent.Replace("%", "")),//MOM 
-                                    MonthYOY = Convert.ToDouble(tr.QuerySelectorAll("span")[3].TextContent.Replace("%", "")),//月營收年增率
-                                    YOY = Convert.ToDouble(tr.QuerySelectorAll("span")[6].TextContent.Replace("%", ""))//YOY
+                                    revenueInterval = tr.QuerySelector("div").Children[0].TextContent,//YYYY/MM
+                                    mom = Convert.ToDouble(tr.QuerySelectorAll("span")[1].TextContent.Replace("%", "")),//MOM 
+                                    monthYOY = Convert.ToDouble(tr.QuerySelectorAll("span")[3].TextContent.Replace("%", "")),//月營收年增率
+                                    yoy = Convert.ToDouble(tr.QuerySelectorAll("span")[6].TextContent.Replace("%", ""))//YOY
                                 });
                             }
 
@@ -460,17 +460,17 @@ namespace StockBuyingHelper.Service.Implements
                      Amount = b.Amount
                  })
                  .Where(c =>
-                    c.VolumeDatas.Take(3).Where(c => c.VolumeK > 500).Any()
+                    c.VolumeDatas.Take(3).Where(c => c.volumeK > 500).Any()
                     && ((c.Type == StockType.ESVUFR 
                         && (
                             c.EPS > 0
                             && c.PE < 25
                             && (
                                     //(c.RevenueDatas[0].MOM > 0 || c.RevenueDatas[1].MOM > 0 || c.RevenueDatas[2].MOM > 0) 
-                                    c.RevenueDatas.Take(3).Where(c => c.MOM > 2).Count() >= 2
+                                    c.RevenueDatas.Take(3).Where(c => c.mom > 2).Count() >= 2
                                     || 
                                     (
-                                        c.RevenueDatas[0].YOY > 0 //|| 
+                                        c.RevenueDatas[0].yoy > 0 //|| 
                                         //(c.RevenueDatas[0].YOY > 0 && (c.RevenueDatas[0].YOY > c.RevenueDatas[1].YOY && c.RevenueDatas[1].YOY > c.RevenueDatas[2].YOY))
                                     )
                                 )

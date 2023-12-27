@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using StockBuingHelper.Web.Dtos;
+using StockBuingHelper.Web.Dtos.Request;
+using StockBuingHelper.Web.Dtos.Response;
 using StockBuyingHelper.Models.Models;
 using StockBuyingHelper.Service.Dtos;
 using StockBuyingHelper.Service.Interfaces;
@@ -20,8 +21,8 @@ namespace StockBuingHelper.Web.Controllers
             _stockService = stockService;
         }
 
-        [HttpGet]
-        public async Task<Result<List<BuyingResultDto>>> GetVtiData([FromQuery] bool queryEtfs = false)
+        [HttpPost]
+        public async Task<Result<List<BuyingResultDto>>> GetVtiData([FromBody] ResGetVtiDataDto reqData)
         {
             var sw = new Stopwatch();
             var res = new Result<List<BuyingResultDto>>();
@@ -31,7 +32,7 @@ namespace StockBuingHelper.Web.Controllers
                 var listStockInfo = await _stockService.GetStockList();
                 var listPrice = await _stockService.GetPrice();                
                 var listHighLow = await _stockService.GetHighLowIn52Weeks(listPrice);
-                var listVti = await _stockService.GetVTI(listPrice, listHighLow, 800);
+                var listVti = await _stockService.GetVTI(listPrice, listHighLow, reqData.vtiIndex);
                 var data =
                     (from a in listStockInfo
                      join b in listVti on a.StockId equals b.StockId
@@ -42,28 +43,30 @@ namespace StockBuingHelper.Web.Controllers
                          Price = b.Price,
                          Type = a.CFICode
                      })
-                     .Where(c => (queryEtfs && 1 == 1) || (!queryEtfs && c.Type == StockType.ESVUFR))
+                     .Where(c => (reqData.queryEtfs && 1 == 1) || (!reqData.queryEtfs && c.Type == StockType.ESVUFR))
                      .ToList();
                 var listPe = await _stockService.GetPE(data);
+                Thread.Sleep(6000);//間隔6秒，避免被誤認攻擊
                 var listRevenue = await _stockService.GetRevenue(data, 3);
+                Thread.Sleep(6000);//間隔6秒，避免被誤認攻擊
                 var listVolume = await _stockService.GetVolume(data, 7);
                 var buyingList = await _stockService.GetBuyingResult(listStockInfo, listVti, listPe, listRevenue, listVolume);
                 
                 res.Content = buyingList.Select((c, idx) => new BuyingResultDto
                 {
-                    Sn = (idx + 1).ToString(),
-                    StockId = c.StockId,
-                    StockName = c.StockName,
-                    Price = c.Price,
-                    HighIn52 = c.HighIn52,
-                    LowIn52 = c.LowIn52,
-                    EpsInterval = c.EpsInterval,
-                    EPS = c.EPS,
-                    PE = c.PE,
-                    RevenueDatas = c.RevenueDatas,
-                    VolumeDatas = c.VolumeDatas,
-                    VTI = c.VTI,
-                    Amount = c.Amount
+                    sn = (idx + 1).ToString(),
+                    stockId = c.StockId,
+                    stockName = c.StockName,
+                    price = c.Price,
+                    highIn52 = c.HighIn52,
+                    lowIn52 = c.LowIn52,
+                    epsInterval = c.EpsInterval,
+                    eps = c.EPS,
+                    pe = c.PE,
+                    revenueDatas = c.RevenueDatas,
+                    volumeDatas = c.VolumeDatas,
+                    vti = c.VTI,
+                    amount = c.Amount
                 }).ToList();
 
                 res.Success = true;

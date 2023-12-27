@@ -15,9 +15,9 @@ namespace StockBuyingHelper.Service.Models
 
     public class RevenueData
     {
-        public string RevenueInterval { get; set; }
-        public double MOM { get; set; }
-        public double MonthYOY { get; set; }
-        public double YOY { get; set; }        
+        public string revenueInterval { get; set; }
+        public double mom { get; set; }
+        public double monthYOY { get; set; }
+        public double yoy { get; set; }        
     }
 }
