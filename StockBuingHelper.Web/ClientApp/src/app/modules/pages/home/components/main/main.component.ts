@@ -26,7 +26,7 @@ export class MainComponent implements OnInit
 
   ngOnInit(): void {
     this.form = this._formBuilder.group({
-      stockId: [],
+      specificStockId: [''],
       vtiRange: [this.vtiRange],
       etfDisplay : [false],
     })
@@ -37,6 +37,7 @@ export class MainComponent implements OnInit
     this._loadingService.setLoading(true, 'Searching...');
 
     let data: ReqGetVtiDto = {
+      specificStockId: this.form.controls['specificStockId'].value,
       vtiIndex : this.vtiRange,
       queryEtfs: this.form.controls['etfDisplay'].value
     }
