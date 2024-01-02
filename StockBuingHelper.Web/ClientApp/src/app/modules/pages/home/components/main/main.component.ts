@@ -17,6 +17,7 @@ export class MainComponent implements OnInit
   vtiResult:ResGetVtiDto[] = [];
   vtiRange: number = 800;
   form!:FormGroup;
+  vtiRes:ResGetVtiDto[] = [];
 
   constructor(
     private _formBuilder: FormBuilder,
@@ -42,9 +43,18 @@ export class MainComponent implements OnInit
       queryEtfs: this.form.controls['etfDisplay'].value
     }
 
-    this._sbhService.GetVtiData(data).subscribe(c => {
-      this.vtiResult = c;
-      this._loadingService.setLoading(false);
+    this._sbhService.GetVtiData(data).subscribe({
+       next: res => 
+       {
+        this.vtiResult = res;
+        this.vtiRes = res;
+        this._loadingService.setLoading(false);
+       },
+       error: err =>
+       {
+        console.log(err);
+        this._loadingService.setLoading(false);
+       }
     });
   }
 }
