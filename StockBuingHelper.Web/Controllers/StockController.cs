@@ -42,14 +42,20 @@ namespace StockBuingHelper.Web.Controllers
                          StockName = a.StockName,
                          Price = b.Price,
                          Type = a.CFICode
-                     })
-                     .Where(c => ((reqData.queryEtfs && 1 == 1) || (!reqData.queryEtfs && c.Type == StockType.ESVUFR)))
-                     .ToList();
-                var listPe = await _stockService.GetPE(data);
+                     }).AsEnumerable();
+
+                if (string.IsNullOrEmpty(reqData.specificStockId) && reqData.queryEtfs == false)
+                {
+                    data = data.Where(c => c.Type == StockType.ESVUFR).AsEnumerable();
+                }
+                var filterData = data.ToList();
+
+
+                var listPe = await _stockService.GetPE(filterData);
                 Thread.Sleep(6000);//間隔6秒，避免被誤認攻擊
-                var listRevenue = await _stockService.GetRevenue(data, 3);
+                var listRevenue = await _stockService.GetRevenue(filterData, 3);
                 Thread.Sleep(6000);//間隔6秒，避免被誤認攻擊
-                var listVolume = await _stockService.GetVolume(data, 7);
+                var listVolume = await _stockService.GetVolume(filterData, 7);
                 var buyingList = await _stockService.GetBuyingResult(listStockInfo, listVti, listPe, listRevenue, listVolume, reqData.specificStockId);
                 
                 res.Content = buyingList.Select((c, idx) => new BuyingResultDto
