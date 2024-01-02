@@ -22,7 +22,7 @@ namespace StockBuyingHelper.Service.Implements
         public async Task<List<StockInfoModel>> GetStockList()
         {
             var res = new List<StockInfoModel>();
-            var httpClient = new HttpClient();            
+            var httpClient = new HttpClient();
             var url = "https://isin.twse.com.tw/isin/C_public.jsp?strMode=2";//本國上市證券國際證券辨識號碼一覽表
             var resMessage = await httpClient.GetAsync(url);
 
@@ -39,26 +39,26 @@ namespace StockBuyingHelper.Service.Implements
                     var listTR = document.QuerySelectorAll("tr:not([colspan])");
 
                     //ESVUFR：一般股, ETFs：ETF
-                    var filterListTr = listTR.Where(c => 
-                        c.Children.Count() >= 7 
+                    var filterListTr = listTR.Where(c =>
+                        c.Children.Count() >= 7
                         && (c.Children[5].TextContent == StockType.ESVUFR || StockType.ETFs.Contains(c.Children[5].TextContent))
                         ).ToList();
 
                     foreach (var tr in filterListTr)
                     {
                         var arrayTd = tr.Children.ToArray();
-                            res.Add(new StockInfoModel()
-                            {
-                                StockId = arrayTd[0].TextContent.Split('　')[0],
-                                StockName = arrayTd[0].TextContent.Split('　').Length == 2 ? arrayTd[0].TextContent.Split('　')[1] : "",
-                                ISINCode = arrayTd[1].TextContent,
-                                Market = arrayTd[3].TextContent,
-                                IndustryType = arrayTd[4].TextContent,
-                                CFICode = arrayTd[5].TextContent,
-                                Note = arrayTd[6].TextContent
-                            });                        
+                        res.Add(new StockInfoModel()
+                        {
+                            StockId = arrayTd[0].TextContent.Split('　')[0],
+                            StockName = arrayTd[0].TextContent.Split('　').Length == 2 ? arrayTd[0].TextContent.Split('　')[1] : "",
+                            ISINCode = arrayTd[1].TextContent,
+                            Market = arrayTd[3].TextContent,
+                            IndustryType = arrayTd[4].TextContent,
+                            CFICode = arrayTd[5].TextContent,
+                            Note = arrayTd[6].TextContent
+                        });
                     }
-                }                
+                }
             }
 
             res = res.Where(c => c.CFICode == StockType.ESVUFR || StockType.ETFs.Contains(c.CFICode)).ToList();
@@ -237,8 +237,8 @@ namespace StockBuyingHelper.Service.Implements
                                 {
                                     txDate = DateOnly.FromDateTime(Convert.ToDateTime(c.formattedDate)),
                                     dealerDiffVolK = c.dealerDiffVolK,
-                                    investmentTrustDiffVolK = c.investmentTrustBuyVolK,
-                                    foreignSellVolK = c.foreignSellVolK,
+                                    investmentTrustDiffVolK = c.investmentTrustDiffVolK,
+                                    foreignSellVolK = c.foreignDiffVolK,
                                     volumeK = Convert.ToInt32(c.volumeK)
                                 }).ToList()
                             };

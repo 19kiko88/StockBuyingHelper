@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <PackageReference Include="AngleSharp" Version="1.0.7" />
+    <PackageReference Include="System.Runtime.Caching" Version="8.0.0" />
     <PackageReference Include="System.Text.Encoding.CodePages" Version="8.0.0" />
   </ItemGroup>
 

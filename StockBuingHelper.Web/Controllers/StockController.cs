@@ -2,9 +2,11 @@
 using StockBuingHelper.Web.Dtos.Request;
 using StockBuingHelper.Web.Dtos.Response;
 using StockBuyingHelper.Models.Models;
+using StockBuyingHelper.Service;
 using StockBuyingHelper.Service.Dtos;
 using StockBuyingHelper.Service.Interfaces;
 using StockBuyingHelper.Service.Models;
+using StockBuyingHelper.Service.Utility;
 using System.Diagnostics;
 
 namespace StockBuingHelper.Web.Controllers
@@ -15,6 +17,7 @@ namespace StockBuingHelper.Web.Controllers
     public class StockController : ControllerBase
     {
         private readonly IStockService _stockService;
+        private readonly int cacheExpireTime = 1440;//快取保留時間
 
         public StockController(IStockService stockService)
         {
@@ -26,10 +29,17 @@ namespace StockBuingHelper.Web.Controllers
         {
             var sw = new Stopwatch();
             var res = new Result<List<BuyingResultDto>>();
+
             try
             {
                 sw.Start();
-                var listStockInfo = await _stockService.GetStockList();
+
+                if (AppCacheUtils.IsSet(CacheType.StockList) == false)
+                {
+                    AppCacheUtils.Set(CacheType.StockList, await _stockService.GetStockList(), AppCacheUtils.Expiration.Absolute, cacheExpireTime);
+                }
+
+                var listStockInfo = (List<StockInfoModel>)AppCacheUtils.Get(CacheType.StockList);
                 var listPrice = await _stockService.GetPrice();                
                 var listHighLow = await _stockService.GetHighLowIn52Weeks(listPrice);
                 var listVti = await _stockService.GetVTI(listPrice, listHighLow, reqData.specificStockId, reqData.vtiIndex);
@@ -52,9 +62,9 @@ namespace StockBuingHelper.Web.Controllers
 
 
                 var listPe = await _stockService.GetPE(filterData);
-                Thread.Sleep(6000);//間隔6秒，避免被誤認攻擊
+                Thread.Sleep(5000);//間隔5秒，避免被誤認攻擊
                 var listRevenue = await _stockService.GetRevenue(filterData, 3);
-                Thread.Sleep(6000);//間隔6秒，避免被誤認攻擊
+                Thread.Sleep(5000);//間隔5秒，避免被誤認攻擊
                 var listVolume = await _stockService.GetVolume(filterData, 7);
                 var buyingList = await _stockService.GetBuyingResult(listStockInfo, listVti, listPe, listRevenue, listVolume, reqData.specificStockId);
                 
@@ -79,7 +89,6 @@ namespace StockBuingHelper.Web.Controllers
             }
             catch (Exception ex)
             {
-                //res.Exception = ex;
                 res.Message = ex.Message;
             }
 
