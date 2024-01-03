@@ -29,20 +29,30 @@ namespace StockBuingHelper.Web.Controllers
         {
             var sw = new Stopwatch();
             var res = new Result<List<BuyingResultDto>>();
-
+            var listStockInfo = new List<StockInfoModel>();
             try
             {
                 sw.Start();
 
                 if (AppCacheUtils.IsSet(CacheType.StockList) == false)
                 {
-                    AppCacheUtils.Set(CacheType.StockList, await _stockService.GetStockList(), AppCacheUtils.Expiration.Absolute, cacheExpireTime);
+                    listStockInfo = await _stockService.GetStockList();
+                    AppCacheUtils.Set(CacheType.StockList, listStockInfo, AppCacheUtils.Expiration.Absolute, cacheExpireTime);
+                }
+                else
+                {
+                    listStockInfo = (List<StockInfoModel>)AppCacheUtils.Get(CacheType.StockList);                    
                 }
 
-                var listStockInfo = (List<StockInfoModel>)AppCacheUtils.Get(CacheType.StockList);
-                var listPrice = await _stockService.GetPrice();                
+                var ids = listStockInfo.Select(c => c.StockId).ToList();
+                Thread.Sleep(1500);//ids為非同步取得，sleep 1.5s
+
+                var listPrice = await _stockService.GetPrice(ids);
+
                 var listHighLow = await _stockService.GetHighLowIn52Weeks(listPrice);
+
                 var listVti = await _stockService.GetVTI(listPrice, listHighLow, reqData.specificStockId, reqData.vtiIndex);
+
                 var data =
                     (from a in listStockInfo
                      join b in listVti on a.StockId equals b.StockId
@@ -63,9 +73,12 @@ namespace StockBuingHelper.Web.Controllers
 
                 var listPe = await _stockService.GetPE(filterData);
                 Thread.Sleep(5000);//間隔5秒，避免被誤認攻擊
+
                 var listRevenue = await _stockService.GetRevenue(filterData, 3);
                 Thread.Sleep(5000);//間隔5秒，避免被誤認攻擊
+
                 var listVolume = await _stockService.GetVolume(filterData, 7);
+
                 var buyingList = await _stockService.GetBuyingResult(listStockInfo, listVti, listPe, listRevenue, listVolume, reqData.specificStockId);
                 
                 res.Content = buyingList.Select((c, idx) => new BuyingResultDto
@@ -92,7 +105,7 @@ namespace StockBuingHelper.Web.Controllers
                 res.Message = ex.Message;
             }
 
-            sw.Start();
+            sw.Stop();
             res.Message += $"Run time：{Math.Round(Convert.ToDouble(sw.ElapsedMilliseconds / 1000), 2)}(s)。";
 
             return res;

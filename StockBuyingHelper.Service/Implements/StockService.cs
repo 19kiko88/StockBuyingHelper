@@ -2,7 +2,6 @@
 using System.Text.Json;
 
 using AngleSharp;
-using AngleSharp.Dom;
 using StockBuyingHelper.Service.Dtos;
 using StockBuyingHelper.Service.Interfaces;
 using StockBuyingHelper.Service.Models;
@@ -70,7 +69,7 @@ namespace StockBuyingHelper.Service.Implements
         /// 取得即時價格
         /// </summary>
         /// <returns></returns>
-        public async Task<List<StockInfoDto>> GetPrice()
+        public async Task<List<StockInfoDto>> GetPrice(List<string> specificIds = null, int taskCount = 25)
         {
             var res = new List<StockInfoDto>();
 
@@ -89,21 +88,34 @@ namespace StockBuyingHelper.Service.Implements
                 var context = BrowsingContext.New(config);
                 var document = await context.OpenAsync(res => res.Content(sr));
 
-                var listTR = document.QuerySelectorAll("#CPHB1_gv tr");
-                foreach (var tr in listTR)
+                var listTR = document.QuerySelectorAll("#CPHB1_gv tr").Skip(1);//.Where((c,idx) => idx > 0);
+                if (specificIds != null && specificIds.Count > 0)
                 {
-                    if (tr.Index() == 0)
-                    {
-                        continue;
-                    }
+                    listTR = listTR.Where(c => specificIds.Contains(c.Children[0].InnerHtml));
+                }
+                var group = TaskUtils.GroupSplit(listTR.ToList(), taskCount);//分群組 for 多執行緒分批執行
+                var tasks = new Task[taskCount];
 
-                    res.Add(new StockInfoDto()
+                for (int i = 0; i < tasks.Length; i++)
+                {
+                    var groupData = group[i];
+                    tasks[i] = Task.Run(async () =>
                     {
-                        StockId = tr.Children[0].InnerHtml,
-                        StockName = tr.Children[1].Children[0].InnerHtml,
-                        Price = Convert.ToDecimal(tr.Children[2].Children[0].InnerHtml)
+                        foreach (var tr in groupData)
+                        {
+                            lock (_lock)
+                            {
+                                res.Add(new StockInfoDto()
+                                {
+                                    StockId = tr.Children[0].InnerHtml,
+                                    StockName = tr.Children[1].Children[0].InnerHtml,
+                                    Price = Convert.ToDecimal(tr.Children[2].Children[0].InnerHtml)
+                                });
+                            }
+                        }
                     });
                 }
+                Task.WaitAll(tasks);
             }
 
             return res;
@@ -172,7 +184,7 @@ namespace StockBuyingHelper.Service.Implements
                                     res.Add(data);
                                 }
 
-                                await Task.Delay(10);//add await for async
+                                //await Task.Delay(10);//add await for async
                             }
                         }
                     });
@@ -206,9 +218,9 @@ namespace StockBuyingHelper.Service.Implements
 
             //分群組 for 多執行緒分批執行
             var groups = TaskUtils.GroupSplit(data, taskCount);
-            var tasks = new Task[groups.Length];
+            var tasks = new Task[groups.Count];
 
-            for (int i = 0; i < groups.Length; i++)
+            for (int i = 0; i < groups.Count; i++)
             {
                 var vtiData = groups[i];
                 tasks[i] = Task.Run(async () =>
@@ -319,9 +331,9 @@ namespace StockBuyingHelper.Service.Implements
 
             //分群組 for 多執行緒分批執行
             var groups = TaskUtils.GroupSplit(data, taskCount);
-            var tasks = new Task[groups.Length];
+            var tasks = new Task[groups.Count];
 
-            for (int i = 0; i < groups.Length; i++)
+            for (int i = 0; i < groups.Count; i++)
             {
                 var vtiData = groups[i];
                 tasks[i] = Task.Run(async () =>
@@ -388,9 +400,9 @@ namespace StockBuyingHelper.Service.Implements
 
             //分群組 for 多執行緒分批執行
             var groups = TaskUtils.GroupSplit(data, taskCount);
-            var tasks = new Task[groups.Length];
+            var tasks = new Task[groups.Count];
 
-            for (int i = 0; i < groups.Length; i++)
+            for (int i = 0; i < groups.Count; i++)
             {
                 var vtiData = groups[i];
                 tasks[i] = Task.Run(async () =>
@@ -521,7 +533,7 @@ namespace StockBuyingHelper.Service.Implements
             //分群組 for 多執行緒分批執行
             var vtiGroup = TaskUtils.GroupSplit(data, taskCount);
 
-            for (int i = 0; i < vtiGroup.Length; i++)
+            for (int i = 0; i < vtiGroup.Count; i++)
             {
                 var vtiData = vtiGroup[i];
                 tasks[i] = Task.Run(async () =>

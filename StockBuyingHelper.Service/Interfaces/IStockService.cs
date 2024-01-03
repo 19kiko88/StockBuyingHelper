@@ -37,7 +37,7 @@ namespace StockBuyingHelper.Service.Interfaces
         /// 取得即時價格
         /// </summary>
         /// <returns></returns>
-        public Task<List<StockInfoDto>> GetPrice();
+        public Task<List<StockInfoDto>> GetPrice(List<string> specificIds = null, int taskCount = 25);
 
         /// <summary>
         /// 取得近52周最高最低價格區間內，目前價格離最高價還有多少百分比，並換算成vti係數(vti越高，表示離52周區間內最高點越近)
