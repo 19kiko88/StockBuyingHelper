@@ -2,11 +2,8 @@
 using StockBuingHelper.Web.Dtos.Request;
 using StockBuingHelper.Web.Dtos.Response;
 using StockBuyingHelper.Models.Models;
-using StockBuyingHelper.Service;
 using StockBuyingHelper.Service.Dtos;
 using StockBuyingHelper.Service.Interfaces;
-using StockBuyingHelper.Service.Models;
-using StockBuyingHelper.Service.Utility;
 using System.Diagnostics;
 
 namespace StockBuingHelper.Web.Controllers
@@ -17,7 +14,6 @@ namespace StockBuingHelper.Web.Controllers
     public class StockController : ControllerBase
     {
         private readonly IStockService _stockService;
-        private readonly int cacheExpireTime = 1440;//快取保留時間
 
         public StockController(IStockService stockService)
         {
@@ -29,55 +25,43 @@ namespace StockBuingHelper.Web.Controllers
         {
             var sw = new Stopwatch();
             var res = new Result<List<BuyingResultDto>>();
-            var listStockInfo = new List<StockInfoModel>();
+
             try
             {
                 sw.Start();
 
-                if (AppCacheUtils.IsSet(CacheType.StockList) == false)
+                var filterIds = new List<string>();
+                if (!string.IsNullOrEmpty(reqData.specificStockId))
                 {
-                    listStockInfo = await _stockService.GetStockList();
-                    AppCacheUtils.Set(CacheType.StockList, listStockInfo, AppCacheUtils.Expiration.Absolute, cacheExpireTime);
-                }
-                else
-                {
-                    listStockInfo = (List<StockInfoModel>)AppCacheUtils.Get(CacheType.StockList);                    
+                    if (reqData.specificStockId.IndexOf(',') > 0)
+                    {
+                        filterIds = reqData.specificStockId.Split(',').ToList();
+                    }
+                    else
+                    {
+                        filterIds = new List<string> { reqData.specificStockId };
+                    }
                 }
 
+                var listStockInfo = await _stockService.GetStockList(reqData.queryEtfs, filterIds);
                 var ids = listStockInfo.Select(c => c.StockId).ToList();
-                Thread.Sleep(1500);//ids為非同步取得，sleep 1.5s
-
                 var listPrice = await _stockService.GetPrice(ids);
-
                 var listHighLow = await _stockService.GetHighLowIn52Weeks(listPrice);
+                var listVti = await _stockService.GetVTI(listPrice, listHighLow, filterIds.Count > 0 ? true : false, reqData.vtiIndex);
 
-                var listVti = await _stockService.GetVTI(listPrice, listHighLow, reqData.specificStockId, reqData.vtiIndex);
+                //vti篩選，縮小資料範圍
+                var vtiFilterData = listVti.Select(c => new StockInfoDto { StockId = c.StockId, StockName = c.StockName }).ToList();
+                var listVolume = await _stockService.GetVolume(vtiFilterData, 7);
 
-                var data =
-                    (from a in listStockInfo
-                     join b in listVti on a.StockId equals b.StockId
-                     select new StockInfoDto
-                     {
-                         StockId = a.StockId,
-                         StockName = a.StockName,
-                         Price = b.Price,
-                         Type = a.CFICode
-                     }).AsEnumerable();
-
-                if (string.IsNullOrEmpty(reqData.specificStockId) && reqData.queryEtfs == false)
-                {
-                    data = data.Where(c => c.Type == StockType.ESVUFR).AsEnumerable();
-                }
-                var filterData = data.ToList();
-
-
-                var listPe = await _stockService.GetPE(filterData);
-                Thread.Sleep(5000);//間隔5秒，避免被誤認攻擊
-
-                var listRevenue = await _stockService.GetRevenue(filterData, 3);
-                Thread.Sleep(5000);//間隔5秒，避免被誤認攻擊
-
-                var listVolume = await _stockService.GetVolume(filterData, 7);
+                //volume篩選，縮小資料範圍
+                var volumFilterData = (from a in listPrice 
+                                   join b in listVolume on a.StockId equals b.StockId
+                                   select new StockInfoDto
+                                   {
+                                       StockId = a.StockId, StockName = a.StockName, Price = a.Price
+                                   }).ToList();
+                var listPe = await _stockService.GetPE(volumFilterData);
+                var listRevenue = await _stockService.GetRevenue(volumFilterData, 3);
 
                 var buyingList = await _stockService.GetBuyingResult(listStockInfo, listVti, listPe, listRevenue, listVolume, reqData.specificStockId);
                 

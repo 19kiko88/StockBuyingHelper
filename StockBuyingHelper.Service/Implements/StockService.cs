@@ -13,54 +13,74 @@ namespace StockBuyingHelper.Service.Implements
     public class StockService: IStockService
     {
         private readonly object _lock = new object();
+        private readonly int cacheExpireTime = 1440;//快取保留時間
 
         /// <summary>
         /// 取得台股清單(上市.櫃)
         /// </summary>
         /// <returns></returns>
-        public async Task<List<StockInfoModel>> GetStockList()
+        public async Task<List<StockInfoModel>> GetStockList(bool queryEtfs, List<string> specificIds = null)
         {
             var res = new List<StockInfoModel>();
-            var httpClient = new HttpClient();
-            var url = "https://isin.twse.com.tw/isin/C_public.jsp?strMode=2";//本國上市證券國際證券辨識號碼一覽表
-            var resMessage = await httpClient.GetAsync(url);
 
-            //檢查回應的伺服器狀態StatusCode是否是200 OK
-            if (resMessage.StatusCode == System.Net.HttpStatusCode.OK)
+
+            if (AppCacheUtils.IsSet(CacheType.StockList) == false)
             {
-                Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);//註冊BIG 5編碼
-                using (var sr = new StreamReader(await resMessage.Content.ReadAsStreamAsync(), Encoding.GetEncoding(950)))
+                var httpClient = new HttpClient();
+                var url = "https://isin.twse.com.tw/isin/C_public.jsp?strMode=2";//本國上市證券國際證券辨識號碼一覽表
+                var resMessage = await httpClient.GetAsync(url);
+
+                //檢查回應的伺服器狀態StatusCode是否是200 OK
+                if (resMessage.StatusCode == System.Net.HttpStatusCode.OK)
                 {
-                    var htmlString = sr.ReadToEnd();
-                    var config = Configuration.Default;
-                    var context = BrowsingContext.New(config);
-                    var document = await context.OpenAsync(res => res.Content(htmlString));
-                    var listTR = document.QuerySelectorAll("tr:not([colspan])");
-
-                    //ESVUFR：一般股, ETFs：ETF
-                    var filterListTr = listTR.Where(c =>
-                        c.Children.Count() >= 7
-                        && (c.Children[5].TextContent == StockType.ESVUFR || StockType.ETFs.Contains(c.Children[5].TextContent))
-                        ).ToList();
-
-                    foreach (var tr in filterListTr)
+                    Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);//註冊BIG 5編碼
+                    using (var sr = new StreamReader(await resMessage.Content.ReadAsStreamAsync(), Encoding.GetEncoding(950)))
                     {
-                        var arrayTd = tr.Children.ToArray();
-                        res.Add(new StockInfoModel()
+                        var htmlString = sr.ReadToEnd();
+                        var config = Configuration.Default;
+                        var context = BrowsingContext.New(config);
+                        var document = await context.OpenAsync(res => res.Content(htmlString));
+                        var listTR = document.QuerySelectorAll("tr:not([colspan])");
+
+                        //ESVUFR：一般股, ETFs：ETF
+                        var filterListTr = listTR.Where(c =>
+                            c.Children.Count() >= 7
+                            && (c.Children[5].TextContent == StockType.ESVUFR || StockType.ETFs.Contains(c.Children[5].TextContent))
+                            ).ToList();
+
+                        foreach (var tr in filterListTr)
                         {
-                            StockId = arrayTd[0].TextContent.Split('　')[0],
-                            StockName = arrayTd[0].TextContent.Split('　').Length == 2 ? arrayTd[0].TextContent.Split('　')[1] : "",
-                            ISINCode = arrayTd[1].TextContent,
-                            Market = arrayTd[3].TextContent,
-                            IndustryType = arrayTd[4].TextContent,
-                            CFICode = arrayTd[5].TextContent,
-                            Note = arrayTd[6].TextContent
-                        });
+                            var arrayTd = tr.Children.ToArray();
+                            res.Add(new StockInfoModel()
+                            {
+                                StockId = arrayTd[0].TextContent.Split('　')[0],
+                                StockName = arrayTd[0].TextContent.Split('　').Length == 2 ? arrayTd[0].TextContent.Split('　')[1] : "",
+                                ISINCode = arrayTd[1].TextContent,
+                                Market = arrayTd[3].TextContent,
+                                IndustryType = arrayTd[4].TextContent,
+                                CFICode = arrayTd[5].TextContent,
+                                Note = arrayTd[6].TextContent
+                            });
+                        }
                     }
                 }
+
+                var data = res.Where(c => c.CFICode == StockType.ESVUFR || StockType.ETFs.Contains(c.CFICode)).AsEnumerable();
+
+                if (queryEtfs)
+                {
+                    data = data.Where(c => c.CFICode == StockType.ESVUFR).AsEnumerable();
+                }
+
+                if (specificIds != null && specificIds.Count > 0)
+                {
+                    data = data.Where(c => specificIds.Contains(c.StockId)).AsEnumerable();
+                }
+
+                AppCacheUtils.Set(CacheType.StockList, data.ToList(), AppCacheUtils.Expiration.Absolute, cacheExpireTime);
             }
 
-            res = res.Where(c => c.CFICode == StockType.ESVUFR || StockType.ETFs.Contains(c.CFICode)).ToList();
+            res = (List<StockInfoModel>)AppCacheUtils.Get(CacheType.StockList);            
 
             return res;
         }
@@ -94,7 +114,7 @@ namespace StockBuyingHelper.Service.Implements
                     listTR = listTR.Where(c => specificIds.Contains(c.Children[0].InnerHtml));
                 }
                 var group = TaskUtils.GroupSplit(listTR.ToList(), taskCount);//分群組 for 多執行緒分批執行
-                var tasks = new Task[taskCount];
+                var tasks = new Task[group.Count];
 
                 for (int i = 0; i < tasks.Length; i++)
                 {
@@ -117,6 +137,8 @@ namespace StockBuyingHelper.Service.Implements
                 }
                 Task.WaitAll(tasks);
             }
+
+            res = res.Where(c => c.Price >= 0 && c.Price <= 200).ToList();
 
             return res;
         }
@@ -234,7 +256,7 @@ namespace StockBuyingHelper.Service.Implements
                         if (resMessage.StatusCode == System.Net.HttpStatusCode.OK)
                         {
 
-                                var sr = await resMessage.Content.ReadAsStringAsync();
+                            var sr = await resMessage.Content.ReadAsStringAsync();
 
                             /*
                              *json => model web tool 
@@ -267,6 +289,8 @@ namespace StockBuyingHelper.Service.Implements
             }
             Task.WaitAll(tasks);
 
+            res = res.Where(c => c.VolumeInfo.Take(3).Where(c => c.volumeK > 500).Any()).ToList();
+
             return res;
         }
 
@@ -277,7 +301,7 @@ namespace StockBuyingHelper.Service.Implements
         /// <param name="highLowData">取得52周間最高 & 最低價資料(非最終成交價)</param>
         /// <param name="amountLimit">vti篩選，vti值必須在多少以上</param>
         /// <returns></returns>
-        public async Task<List<VtiInfoModel>> GetVTI(List<StockInfoDto> priceData, List<StockHighLowIn52WeeksInfoModel> highLowData, string specificStockId = "", int amountLimit = 0)
+        public async Task<List<VtiInfoModel>> GetVTI(List<StockInfoDto> priceData, List<StockHighLowIn52WeeksInfoModel> highLowData, bool ignoreAmountLimit = false, int amountLimit = 0)
         {
             var vtiData =
                 (from a in priceData
@@ -289,15 +313,15 @@ namespace StockBuyingHelper.Service.Implements
                      Price = a.Price,
                      HighIn52 = b.HighPriceInCurrentYear,
                      LowIn52 = b.LowPriceInCurrentYear
-                 }).AsEnumerable();
+                 }).ToList();
 
-            if (!string.IsNullOrEmpty(specificStockId))
-            {
-                vtiData = vtiData.Where(c => c.StockId == specificStockId).AsEnumerable();
-            }
-            var listVTI = vtiData.ToList();
+            //if (specificStockId != null && specificStockId.Count > 0)
+            //{
+            //    vtiData = vtiData.Where(c => specificStockId.Contains(c.StockId));//.AsEnumerable();
+            //}
+            //var listVTI = vtiData.ToList();
 
-            foreach (var item in listVTI)
+            foreach (var item in vtiData)
             {
                 var diffHigh = (item.HighIn52 - item.LowIn52) == 0M ? 0.01M : (item.HighIn52 - item.LowIn52);
 
@@ -309,12 +333,12 @@ namespace StockBuyingHelper.Service.Implements
                 item.Amount = Convert.ToInt32(Math.Round(item.VTI, 2) * 1000);
             }
 
-            if (string.IsNullOrEmpty(specificStockId) && amountLimit > 0)
+            if (!ignoreAmountLimit)
             {
-                listVTI = listVTI.Where(c => c.Amount > amountLimit).ToList();
+                vtiData = vtiData.Where(c => c.Amount > amountLimit).ToList();
             }
 
-            return listVTI;
+            return vtiData;
         }
 
         /// <summary>
