@@ -1,6 +1,5 @@
 ﻿using System.Text;
 using System.Text.Json;
-
 using AngleSharp;
 using StockBuyingHelper.Service.Dtos;
 using StockBuyingHelper.Service.Interfaces;
@@ -65,33 +64,34 @@ namespace StockBuyingHelper.Service.Implements
                     }
                 }
 
-                var data = res.Where(c => c.CFICode == StockType.ESVUFR || StockType.ETFs.Contains(c.CFICode)).AsEnumerable();
-
-                if (queryEtfs)
-                {
-                    data = data.Where(c => c.CFICode == StockType.ESVUFR).AsEnumerable();
-                }
-
-                if (specificIds != null && specificIds.Count > 0)
-                {
-                    data = data.Where(c => specificIds.Contains(c.StockId)).AsEnumerable();
-                }
-
-                AppCacheUtils.Set(CacheType.StockList, data.ToList(), AppCacheUtils.Expiration.Absolute, cacheExpireTime);
+                AppCacheUtils.Set(CacheType.StockList, res, AppCacheUtils.Expiration.Absolute, cacheExpireTime);
             }
 
-            res = (List<StockInfoModel>)AppCacheUtils.Get(CacheType.StockList);            
+            res = (List<StockInfoModel>)AppCacheUtils.Get(CacheType.StockList);
 
-            return res;
+            var data = res.Where(c => c.CFICode == StockType.ESVUFR || StockType.ETFs.Contains(c.CFICode)).AsEnumerable();
+
+            if (queryEtfs)
+            {
+                data = data.Where(c => c.CFICode == StockType.ESVUFR).AsEnumerable();
+            }
+
+            if (specificIds != null && specificIds.Count > 0)
+            {
+                data = data.Where(c => specificIds.Contains(c.StockId)).AsEnumerable();
+            }
+
+
+            return data.ToList();
         }
 
         /// <summary>
         /// 取得即時價格
         /// </summary>
         /// <returns></returns>
-        public async Task<List<StockInfoDto>> GetPrice(List<string> specificIds = null, int taskCount = 25)
+        public async Task<List<StockPriceInfoModel>> GetPrice(List<string> specificIds = null, decimal? priceLow = 0, decimal? priceHigh = 200, int taskCount = 25)
         {
-            var res = new List<StockInfoDto>();
+            var res = new List<StockPriceInfoModel>();
 
             var httpClient = new HttpClient();
             //var url = $"https://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch=tse_{id}.tw&json=1&delay=0";
@@ -125,7 +125,7 @@ namespace StockBuyingHelper.Service.Implements
                         {
                             lock (_lock)
                             {
-                                res.Add(new StockInfoDto()
+                                res.Add(new StockPriceInfoModel()
                                 {
                                     StockId = tr.Children[0].InnerHtml,
                                     StockName = tr.Children[1].Children[0].InnerHtml,
@@ -138,7 +138,12 @@ namespace StockBuyingHelper.Service.Implements
                 Task.WaitAll(tasks);
             }
 
-            res = res.Where(c => c.Price >= 0 && c.Price <= 200).ToList();
+            if (priceLow.HasValue || priceHigh.HasValue)
+            {
+                priceLow = priceLow.HasValue ? priceLow.Value : 0;
+                priceHigh = priceHigh.HasValue ? priceHigh.Value : 99999;
+                res = res.Where(c => c.Price >= priceLow && c.Price <= priceHigh).ToList();
+            }            
 
             return res;
         }
@@ -149,7 +154,7 @@ namespace StockBuyingHelper.Service.Implements
         /// <param name="realTimeData">即時成交價</param>
         /// <param name="taskCount">多執行緒的Task數量</param>
         /// <returns></returns>
-        public async Task<List<StockHighLowIn52WeeksInfoModel>> GetHighLowIn52Weeks(List<StockInfoDto> realTimeData, int taskCount = 25)
+        public async Task<List<StockHighLowIn52WeeksInfoModel>> GetHighLowIn52Weeks(List<StockPriceInfoModel> realTimeData, int taskCount = 25)
         {
             var res = new List<StockHighLowIn52WeeksInfoModel>();
             var httpClient = new HttpClient();
@@ -289,6 +294,7 @@ namespace StockBuyingHelper.Service.Implements
             }
             Task.WaitAll(tasks);
 
+            //近3個交易日，必須有一天成交量大於500
             res = res.Where(c => c.VolumeInfo.Take(3).Where(c => c.volumeK > 500).Any()).ToList();
 
             return res;
@@ -301,7 +307,7 @@ namespace StockBuyingHelper.Service.Implements
         /// <param name="highLowData">取得52周間最高 & 最低價資料(非最終成交價)</param>
         /// <param name="amountLimit">vti篩選，vti值必須在多少以上</param>
         /// <returns></returns>
-        public async Task<List<VtiInfoModel>> GetVTI(List<StockInfoDto> priceData, List<StockHighLowIn52WeeksInfoModel> highLowData, bool ignoreAmountLimit = false, int amountLimit = 0)
+        public async Task<List<VtiInfoModel>> GetVTI(List<StockPriceInfoModel> priceData, List<StockHighLowIn52WeeksInfoModel> highLowData, int? amountLimit = 0)
         {
             var vtiData =
                 (from a in priceData
@@ -315,11 +321,6 @@ namespace StockBuyingHelper.Service.Implements
                      LowIn52 = b.LowPriceInCurrentYear
                  }).ToList();
 
-            //if (specificStockId != null && specificStockId.Count > 0)
-            //{
-            //    vtiData = vtiData.Where(c => specificStockId.Contains(c.StockId));//.AsEnumerable();
-            //}
-            //var listVTI = vtiData.ToList();
 
             foreach (var item in vtiData)
             {
@@ -333,9 +334,9 @@ namespace StockBuyingHelper.Service.Implements
                 item.Amount = Convert.ToInt32(Math.Round(item.VTI, 2) * 1000);
             }
 
-            if (!ignoreAmountLimit)
+            if (amountLimit.HasValue)
             {
-                vtiData = vtiData.Where(c => c.Amount > amountLimit).ToList();
+                vtiData = vtiData.Where(c => c.Amount >= amountLimit).ToList();
             }
 
             return vtiData;
@@ -398,6 +399,13 @@ namespace StockBuyingHelper.Service.Implements
                 });
             }
             Task.WaitAll(tasks);
+
+            //res = res.Where(c => c.EpsAcc4Q > 0 && c.PE <= 25).ToList();
+            res = 
+                (from a in res
+                join b in data on a.StockId equals b.StockId
+                where StockType.ETFs.Contains(b.Type) || (b.Type == StockType.ESVUFR && (a.EpsAcc4Q > 0 && a.PE <= 25))
+                select a).ToList();
 
             return res;
         }
@@ -506,8 +514,8 @@ namespace StockBuyingHelper.Service.Implements
             if (string.IsNullOrEmpty(specificStockId))
             {
                 data = data.Where(c =>
-                    c.VolumeDatas.Take(3).Where(c => c.volumeK > 500).Any()
-                    && ((c.Type == StockType.ESVUFR
+                    //c.VolumeDatas.Take(3).Where(c => c.volumeK > 500).Any() &&
+                     (c.Type == StockType.ESVUFR
                         && (
                             c.EPS > 0
                             && c.PE < 25
@@ -522,7 +530,7 @@ namespace StockBuyingHelper.Service.Implements
                                 )
                             )
                         )
-                        || StockType.ETFs.Contains(c.Type))//ETF不管營收
+                        || StockType.ETFs.Contains(c.Type)//ETF不管營收
                  ).AsEnumerable();
             }
 

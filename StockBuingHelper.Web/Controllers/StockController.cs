@@ -44,24 +44,41 @@ namespace StockBuingHelper.Web.Controllers
                 }
 
                 var listStockInfo = await _stockService.GetStockList(reqData.queryEtfs, filterIds);
-                var ids = listStockInfo.Select(c => c.StockId).ToList();
-                var listPrice = await _stockService.GetPrice(ids);
+                //內含篩選條件1.：股價0~200。縮小資料範圍
+                var listPrice = await _stockService.GetPrice(listStockInfo.Select(c => c.StockId).ToList(), 0, 200);
                 var listHighLow = await _stockService.GetHighLowIn52Weeks(listPrice);
-                var listVti = await _stockService.GetVTI(listPrice, listHighLow, filterIds.Count > 0 ? true : false, reqData.vtiIndex);
+                //內含篩選條件2.：vti(reqData.vtiIndex) > 800。縮小資料範圍
+                var listVti = await _stockService.GetVTI(listPrice, listHighLow, filterIds.Count > 0 ? 0 : reqData.vtiIndex);
 
-                //vti篩選，縮小資料範圍
-                var vtiFilterData = listVti.Select(c => new StockInfoDto { StockId = c.StockId, StockName = c.StockName }).ToList();
-                var listVolume = await _stockService.GetVolume(vtiFilterData, 7);
 
-                //volume篩選，縮小資料範圍
-                var volumFilterData = (from a in listPrice 
-                                   join b in listVolume on a.StockId equals b.StockId
-                                   select new StockInfoDto
-                                   {
-                                       StockId = a.StockId, StockName = a.StockName, Price = a.Price
-                                   }).ToList();
-                var listPe = await _stockService.GetPE(volumFilterData);
-                var listRevenue = await _stockService.GetRevenue(volumFilterData, 3);
+                #region Yahoo API(要減少Request次數，變免被block)
+                //內含篩選條件3.：近3個交易日，必須有一天成交量大於500。縮小資料範圍
+                var listVolume = await _stockService.GetVolume(
+                    listVti.Select(c => new StockInfoDto { StockId = c.StockId, StockName = c.StockName }).ToList()
+                    , 7
+                );
+                //dto for parameter
+                var volumeDto =
+                    (from a in listVolume
+                     join b in listPrice on a.StockId equals b.StockId
+                     join c in listStockInfo on b.StockId equals c.StockId
+                     select new StockInfoDto
+                     {
+                         StockId = c.StockId,
+                         StockName = c.StockName,
+                         Price = b.Price,
+                         Type = c.CFICode
+                     }).ToList();
+
+
+                //內含篩選條件4.：近四季eps>0, pe<25。縮小資料範圍
+                var listPe = await _stockService.GetPE(volumeDto);
+                //dto for parameter
+                var peDto = listPe.Select(c => new StockInfoDto { StockId = c.StockId, StockName = c.StockName }).ToList();
+
+                var listRevenue = await _stockService.GetRevenue(peDto, 3);
+                #endregion
+
 
                 var buyingList = await _stockService.GetBuyingResult(listStockInfo, listVti, listPe, listRevenue, listVolume, reqData.specificStockId);
                 
