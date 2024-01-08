@@ -10,11 +10,14 @@ namespace StockBuyingHelper.Service.Interfaces
 {
     public interface IStockService
     {
+        public bool SpecificStockId { get; set; }
         /// <summary>
         /// 取得台股清單(上市.櫃)
         /// </summary>
         /// <returns></returns>
-        public Task<List<StockInfoModel>> GetStockList(bool queryEtfs, List<string> specificIds = null);
+        public Task<List<StockInfoModel>> GetStockList();
+
+        public Task<List<StockInfoModel>> GetFilterStockList(bool queryEtfs, List<string> specificIds = null);
 
         /// <summary>
         /// 取得52周間最高 & 最低價(非最終成交價)
@@ -31,13 +34,17 @@ namespace StockBuyingHelper.Service.Interfaces
         /// <param name="txDateCount">交易日(3~10)</param>
         /// <param name="taskCount">多執行緒數量</param>
         /// <returns></returns>
-        public Task<List<StockVolumeInfoModel>> GetVolume(List<StockInfoDto> data, int txDateCount = 10, int taskCount = 25);
+        public Task<List<StockVolumeInfoModel>> GetVolume(List<VtiInfoModel> data, int txDateCount = 10, int taskCount = 25);
+
+        public Task<List<StockVolumeInfoModel>> GetFilterVolumeList(List<VtiInfoModel> vtiData, int volumeKLimit, int? txDateCount = 10, int? taskCount = 25);
 
         /// <summary>
         /// 取得即時價格
         /// </summary>
         /// <returns></returns>
-        public Task<List<StockPriceInfoModel>> GetPrice(List<string> specificIds = null, decimal? priceLow = 0, decimal? priceHigh = 200, int taskCount = 25);
+        public Task<List<StockPriceInfoModel>> GetPrice(List<string> specificIds = null, int taskCount = 25);
+
+        public Task<List<StockPriceInfoModel>> GetFilterPriceList(List<string> specificIds = null, decimal? priceLow = 0, decimal? priceHigh = 200);
 
         /// <summary>
         /// 取得近52周最高最低價格區間內，目前價格離最高價還有多少百分比，並換算成vti係數(vti越高，表示離52周區間內最高點越近)
@@ -46,7 +53,8 @@ namespace StockBuyingHelper.Service.Interfaces
         /// <param name="highLowData">取得52周間最高 & 最低價資料(非最終成交價)</param>
         /// <param name="amountLimit">vti篩選，vti值必須在多少以上</param>
         /// <returns></returns>
-        public Task<List<VtiInfoModel>> GetVTI(List<StockPriceInfoModel> priceData, List<StockHighLowIn52WeeksInfoModel> highLowData, int? amountLimit = 0);
+        public Task<List<VtiInfoModel>> GetVTI(List<StockPriceInfoModel> priceData, List<StockHighLowIn52WeeksInfoModel> highLowData);
+        public Task<List<VtiInfoModel>> GetFilterVTI(List<StockPriceInfoModel> priceData, List<StockHighLowIn52WeeksInfoModel> highLowData, int? amountLimit = 0);
 
         /// <summary>
         /// 取得本益比(PE) & 近四季EPS

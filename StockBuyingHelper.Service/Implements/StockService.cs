@@ -11,14 +11,16 @@ namespace StockBuyingHelper.Service.Implements
 {
     public class StockService: IStockService
     {
+        public bool SpecificStockId { get; set; }
         private readonly object _lock = new object();
         private readonly int cacheExpireTime = 1440;//快取保留時間
+        //private static List<StockVolumeInfoModel> lockVolumeObj = new List<StockVolumeInfoModel>();
 
         /// <summary>
         /// 取得台股清單(上市.櫃)
         /// </summary>
         /// <returns></returns>
-        public async Task<List<StockInfoModel>> GetStockList(bool queryEtfs, List<string> specificIds = null)
+        public async Task<List<StockInfoModel>> GetStockList()
         {
             var res = new List<StockInfoModel>();
 
@@ -69,27 +71,36 @@ namespace StockBuyingHelper.Service.Implements
 
             res = (List<StockInfoModel>)AppCacheUtils.Get(CacheType.StockList);
 
-            var data = res.Where(c => c.CFICode == StockType.ESVUFR || StockType.ETFs.Contains(c.CFICode)).AsEnumerable();
+            res = res.Where(c => c.CFICode == StockType.ESVUFR || StockType.ETFs.Contains(c.CFICode)).ToList();
 
-            if (queryEtfs)
+            return res;
+        }
+
+        public async Task<List<StockInfoModel>> GetFilterStockList(bool queryEtfs, List<string> specificIds = null)
+        {
+            var data = await GetStockList();
+            var data_ = data.AsEnumerable();
+
+            if (SpecificStockId == false && queryEtfs == false)
             {
-                data = data.Where(c => c.CFICode == StockType.ESVUFR).AsEnumerable();
+                data_ = data_.Where(c => c.CFICode == StockType.ESVUFR).AsEnumerable();
             }
 
             if (specificIds != null && specificIds.Count > 0)
             {
-                data = data.Where(c => specificIds.Contains(c.StockId)).AsEnumerable();
+                data_ = data_.Where(c => specificIds.Contains(c.StockId)).AsEnumerable();
             }
 
+            var res = data_.ToList();
 
-            return data.ToList();
+            return res;
         }
 
         /// <summary>
         /// 取得即時價格
         /// </summary>
         /// <returns></returns>
-        public async Task<List<StockPriceInfoModel>> GetPrice(List<string> specificIds = null, decimal? priceLow = 0, decimal? priceHigh = 200, int taskCount = 25)
+        public async Task<List<StockPriceInfoModel>> GetPrice(List<string> specificIds = null, int taskCount = 25)
         {
             var res = new List<StockPriceInfoModel>();
 
@@ -136,14 +147,21 @@ namespace StockBuyingHelper.Service.Implements
                     });
                 }
                 Task.WaitAll(tasks);
-            }
+            }         
 
-            if (priceLow.HasValue || priceHigh.HasValue)
+            return res;
+        }
+
+        public async Task<List<StockPriceInfoModel>> GetFilterPriceList(List<string> specificIds = null, decimal? priceLow = 0, decimal? priceHigh = 200)
+        {
+            var res = await GetPrice(specificIds);
+
+            if (SpecificStockId == false && (priceLow.HasValue || priceHigh.HasValue))
             {
                 priceLow = priceLow.HasValue ? priceLow.Value : 0;
                 priceHigh = priceHigh.HasValue ? priceHigh.Value : 99999;
                 res = res.Where(c => c.Price >= priceLow && c.Price <= priceHigh).ToList();
-            }            
+            }
 
             return res;
         }
@@ -229,7 +247,7 @@ namespace StockBuyingHelper.Service.Implements
         /// <param name="txDateCount">交易日(3~10)</param>
         /// <param name="taskCount">多執行緒數量</param>
         /// <returns></returns>
-        public async Task<List<StockVolumeInfoModel>> GetVolume(List<StockInfoDto> data, int txDateCount = 10, int taskCount = 25)
+        public async Task<List<StockVolumeInfoModel>> GetVolume(List<VtiInfoModel> data, int txDateCount = 10, int taskCount = 25)
         {
             var res = new List<StockVolumeInfoModel>();
             var httpClient = new HttpClient();
@@ -264,7 +282,7 @@ namespace StockBuyingHelper.Service.Implements
                             var sr = await resMessage.Content.ReadAsStringAsync();
 
                             /*
-                             *json => model web tool 
+                             *json => model web tool
                              *ref：https://json2csharp.com/
                              */
                             var deserializeData = JsonSerializer.Deserialize<StockVolumeAPIModel>(sr);
@@ -294,8 +312,61 @@ namespace StockBuyingHelper.Service.Implements
             }
             Task.WaitAll(tasks);
 
-            //近3個交易日，必須有一天成交量大於500
-            res = res.Where(c => c.VolumeInfo.Take(3).Where(c => c.volumeK > 500).Any()).ToList();
+
+            return res;
+        }
+
+        public async Task<List<StockVolumeInfoModel>> GetFilterVolumeList(List<VtiInfoModel> vtiData, int volumeKLimit = 500, int? txDateCount = 10, int? taskCount = 25)
+        {
+            //var res = new List<StockVolumeInfoModel>();
+
+            //var noVolumeInfoData = vtiData.GroupJoin(lockVolumeObj, a => a.StockId, b => b.StockId, (a, b) => new
+            //{
+            //    a.StockId,
+            //    a.StockName,
+            //    b
+            //}).SelectMany(c => c.b.DefaultIfEmpty(), (c, b) => new
+            //{
+            //    c.StockId,
+            //    c.StockName,
+            //    hasVolumeData = (b == null ? false : true)
+            //});
+
+            //var newData = new List<StockInfoDto>();
+            //foreach (var item in noVolumeInfoData)
+            //{
+            //    if (item.hasVolumeData)
+            //    {
+            //        var oldData = lockVolumeObj.Where(c => c.StockId == item.StockId).FirstOrDefault();
+            //        if (oldData != null)
+            //        {
+            //            res.Add(oldData);//記憶體已經有volume資料，直接add到model
+            //        }
+            //    }
+            //    else
+            //    {
+            //        newData.Add(new StockInfoDto() { StockId = item.StockId, StockName = item.StockName });//記憶體還沒有volume資料的newData，要透過yahoo api取得volume相關資料
+            //    }
+            //}
+
+            //var newDataVolumeInfo = await GetVolume(newData, txDateCount.Value, taskCount.Value);
+            //res.AddRange(newDataVolumeInfo);//api取得的結果加入到model
+
+            //lock (lockVolumeObj)
+            //{
+            //    //var diff = res.Except(lockVolumeObj);
+            //    foreach (var item in newDataVolumeInfo)
+            //    {//移除舊資料，記憶體只存放最新資料
+            //        //lockVolumeObj.RemoveAll(c => c.StockId == item.StockId);
+            //        lockVolumeObj.Add(item);
+            //    }
+            //}
+            var res = await GetVolume(vtiData, txDateCount.Value, taskCount.Value);
+            if (SpecificStockId == false && volumeKLimit > 0)
+            {
+                //近3個交易日，必須有一天成交量大於500
+                res = res.Where(c => c.VolumeInfo.Take(3).Where(c => c.volumeK > 500).Any()).ToList();
+            }
 
             return res;
         }
@@ -307,7 +378,7 @@ namespace StockBuyingHelper.Service.Implements
         /// <param name="highLowData">取得52周間最高 & 最低價資料(非最終成交價)</param>
         /// <param name="amountLimit">vti篩選，vti值必須在多少以上</param>
         /// <returns></returns>
-        public async Task<List<VtiInfoModel>> GetVTI(List<StockPriceInfoModel> priceData, List<StockHighLowIn52WeeksInfoModel> highLowData, int? amountLimit = 0)
+        public async Task<List<VtiInfoModel>> GetVTI(List<StockPriceInfoModel> priceData, List<StockHighLowIn52WeeksInfoModel> highLowData)
         {
             var vtiData =
                 (from a in priceData
@@ -334,12 +405,18 @@ namespace StockBuyingHelper.Service.Implements
                 item.Amount = Convert.ToInt32(Math.Round(item.VTI, 2) * 1000);
             }
 
-            if (amountLimit.HasValue)
-            {
-                vtiData = vtiData.Where(c => c.Amount >= amountLimit).ToList();
-            }
-
             return vtiData;
+        }
+
+        public async Task<List<VtiInfoModel>> GetFilterVTI(List<StockPriceInfoModel> priceData, List<StockHighLowIn52WeeksInfoModel> highLowData, int? amountLimit = 0)
+        {
+            var res = await GetVTI(priceData, highLowData);
+            if (SpecificStockId == false && amountLimit.HasValue)
+            {
+                res = res.Where(c => c.Amount >= amountLimit).ToList();
+            }            
+
+            return res;
         }
 
         /// <summary>
@@ -521,7 +598,7 @@ namespace StockBuyingHelper.Service.Implements
                             && c.PE < 25
                             && (
                                     //(c.RevenueDatas[0].MOM > 0 || c.RevenueDatas[1].MOM > 0 || c.RevenueDatas[2].MOM > 0) 
-                                    c.RevenueDatas.Take(3).Where(c => c.mom > 2).Count() >= 2
+                                    c.RevenueDatas.Take(3).Where(c => c.mom > 0).Count() >= 2
                                     ||
                                     (
                                         c.RevenueDatas[0].yoy > 0 //|| 

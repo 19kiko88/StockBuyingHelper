@@ -4,6 +4,7 @@ using StockBuingHelper.Web.Dtos.Response;
 using StockBuyingHelper.Models.Models;
 using StockBuyingHelper.Service.Dtos;
 using StockBuyingHelper.Service.Interfaces;
+using StockBuyingHelper.Service.Models;
 using System.Diagnostics;
 
 namespace StockBuingHelper.Web.Controllers
@@ -14,6 +15,7 @@ namespace StockBuingHelper.Web.Controllers
     public class StockController : ControllerBase
     {
         private readonly IStockService _stockService;
+        private static List<StockVolumeInfoModel> lockVolumeObj = new List<StockVolumeInfoModel>();
 
         public StockController(IStockService stockService)
         {
@@ -36,27 +38,30 @@ namespace StockBuingHelper.Web.Controllers
                     if (reqData.specificStockId.IndexOf(',') > 0)
                     {
                         filterIds = reqData.specificStockId.Split(',').ToList();
+                        _stockService.SpecificStockId = true;
                     }
                     else
                     {
                         filterIds = new List<string> { reqData.specificStockId };
+                        _stockService.SpecificStockId = true;
                     }
                 }
 
-                var listStockInfo = await _stockService.GetStockList(reqData.queryEtfs, filterIds);
-                //內含篩選條件1.：股價0~200。縮小資料範圍
-                var listPrice = await _stockService.GetPrice(listStockInfo.Select(c => c.StockId).ToList(), 0, 200);
-                var listHighLow = await _stockService.GetHighLowIn52Weeks(listPrice);
-                //內含篩選條件2.：vti(reqData.vtiIndex) > 800。縮小資料範圍
-                var listVti = await _stockService.GetVTI(listPrice, listHighLow, filterIds.Count > 0 ? 0 : reqData.vtiIndex);
+                var listStockInfo = await _stockService.GetFilterStockList(reqData.queryEtfs, filterIds);
 
+                //篩選條件1.：股價0~200。縮小資料範圍
+                var listPrice = await _stockService.GetFilterPriceList(listStockInfo.Select(c => c.StockId).ToList(), 0, 200);
+
+                var listHighLow = await _stockService.GetHighLowIn52Weeks(listPrice);
+
+                //篩選條件2.：vti(reqData.vtiIndex) > 800。縮小資料範圍
+                var listVti = await _stockService.GetFilterVTI(listPrice, listHighLow, filterIds.Count > 0 ? 0 : reqData.vtiIndex);
 
                 #region Yahoo API(要減少Request次數，變免被block)
-                //內含篩選條件3.：近3個交易日，必須有一天成交量大於500。縮小資料範圍
-                var listVolume = await _stockService.GetVolume(
-                    listVti.Select(c => new StockInfoDto { StockId = c.StockId, StockName = c.StockName }).ToList()
-                    , 7
-                );
+
+                #region get Volume
+                //篩選條件3.：近3個交易日，必須有一天成交量大於500。縮小資料範圍
+                var listVolume = await _stockService.GetFilterVolumeList(listVti, 500, 7);
                 //dto for parameter
                 var volumeDto =
                     (from a in listVolume
@@ -69,14 +74,24 @@ namespace StockBuingHelper.Web.Controllers
                          Price = b.Price,
                          Type = c.CFICode
                      }).ToList();
+                #endregion
 
 
+
+                #region get EPS & PE
                 //內含篩選條件4.：近四季eps>0, pe<25。縮小資料範圍
                 var listPe = await _stockService.GetPE(volumeDto);
                 //dto for parameter
                 var peDto = listPe.Select(c => new StockInfoDto { StockId = c.StockId, StockName = c.StockName }).ToList();
+                #endregion
 
+
+
+                #region get Revenue
                 var listRevenue = await _stockService.GetRevenue(peDto, 3);
+                #endregion
+
+
                 #endregion
 
 
