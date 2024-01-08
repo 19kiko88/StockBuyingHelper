@@ -50,7 +50,9 @@ namespace StockBuingHelper.Web.Controllers
                 var listStockInfo = await _stockService.GetFilterStockList(reqData.queryEtfs, filterIds);
 
                 //篩選條件1.：股價0~200。縮小資料範圍
-                var listPrice = await _stockService.GetFilterPriceList(listStockInfo.Select(c => c.StockId).ToList(), 0, 200);
+                var ids = listStockInfo.Select(c => c.StockId).ToList();
+                Thread.Sleep(1500);
+                var listPrice = await _stockService.GetFilterPriceList(ids, 0, 200);
 
                 var listHighLow = await _stockService.GetHighLowIn52Weeks(listPrice);
 
@@ -79,16 +81,14 @@ namespace StockBuingHelper.Web.Controllers
 
 
                 #region get EPS & PE
-                //內含篩選條件4.：近四季eps>0, pe<25。縮小資料範圍
-                var listPe = await _stockService.GetPE(volumeDto);
-                //dto for parameter
-                var peDto = listPe.Select(c => new StockInfoDto { StockId = c.StockId, StockName = c.StockName }).ToList();
+                //篩選條件4.：近四季eps>0, pe<=25。縮小資料範圍
+                var listPe = await _stockService.GetFilterPeList(volumeDto, 0, 25);
                 #endregion
 
 
 
                 #region get Revenue
-                var listRevenue = await _stockService.GetRevenue(peDto, 3);
+                var listRevenue = await _stockService.GetRevenue(listPe, 3);
                 #endregion
 
 

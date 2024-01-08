@@ -477,12 +477,18 @@ namespace StockBuyingHelper.Service.Implements
             }
             Task.WaitAll(tasks);
 
-            //res = res.Where(c => c.EpsAcc4Q > 0 && c.PE <= 25).ToList();
-            res = 
+            return res;
+        }
+
+        public async Task<List<PeInfoModel>> GetFilterPeList(List<StockInfoDto> data, decimal? eps = 0, double? pe = 25, int taskCount = 25)
+        {
+            var res = await GetPE(data, taskCount);
+
+            res =
                 (from a in res
-                join b in data on a.StockId equals b.StockId
-                where StockType.ETFs.Contains(b.Type) || (b.Type == StockType.ESVUFR && (a.EpsAcc4Q > 0 && a.PE <= 25))
-                select a).ToList();
+                 join b in data on a.StockId equals b.StockId
+                 where StockType.ETFs.Contains(b.Type) || (b.Type == StockType.ESVUFR && (a.EpsAcc4Q > eps && a.PE <= pe))
+                 select a).ToList();            
 
             return res;
         }
@@ -493,7 +499,7 @@ namespace StockBuyingHelper.Service.Implements
         /// <param name="data">資料來源</param>
         /// <param name="taskCount">多執行緒的Task數量</param>
         /// <returns></returns>
-        public async Task<List<RevenueInfoModel>> GetRevenue(List<StockInfoDto> data, int revenueMonthCount = 3, int taskCount = 25)
+        public async Task<List<RevenueInfoModel>> GetRevenue(List<PeInfoModel> data, int revenueMonthCount = 3, int taskCount = 25)
         {
             var res = new List<RevenueInfoModel>();
             var httpClient = new HttpClient();
@@ -594,9 +600,8 @@ namespace StockBuyingHelper.Service.Implements
                     //c.VolumeDatas.Take(3).Where(c => c.volumeK > 500).Any() &&
                      (c.Type == StockType.ESVUFR
                         && (
-                            c.EPS > 0
-                            && c.PE < 25
-                            && (
+                            //c.EPS > 0 && c.PE < 25
+                            //&& (
                                     //(c.RevenueDatas[0].MOM > 0 || c.RevenueDatas[1].MOM > 0 || c.RevenueDatas[2].MOM > 0) 
                                     c.RevenueDatas.Take(3).Where(c => c.mom > 0).Count() >= 2
                                     ||
@@ -604,7 +609,7 @@ namespace StockBuyingHelper.Service.Implements
                                         c.RevenueDatas[0].yoy > 0 //|| 
                                                                   //(c.RevenueDatas[0].YOY > 0 && (c.RevenueDatas[0].YOY > c.RevenueDatas[1].YOY && c.RevenueDatas[1].YOY > c.RevenueDatas[2].YOY))
                                     )
-                                )
+                                //)
                             )
                         )
                         || StockType.ETFs.Contains(c.Type)//ETF不管營收

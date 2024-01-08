@@ -65,13 +65,15 @@ namespace StockBuyingHelper.Service.Interfaces
         /// <returns></returns>
         public Task<List<PeInfoModel>> GetPE(List<StockInfoDto> data, int taskCount = 25);
 
+        public Task<List<PeInfoModel>> GetFilterPeList(List<StockInfoDto> data, decimal? eps = 0, double? pe = 25, int taskCount = 25);
+
         /// <summary>
         /// 取得每月MoM. YoY增減趴數
         /// </summary>
         /// <param name="data">資料來源</param>
         /// <param name="taskCount">多執行緒的Task數量</param>
         /// <returns></returns>
-        public Task<List<RevenueInfoModel>> GetRevenue(List<StockInfoDto> data, int revenueMonthCount = 3, int taskCount = 25);
+        public Task<List<RevenueInfoModel>> GetRevenue(List<PeInfoModel> data, int revenueMonthCount = 3, int taskCount = 25);
 
 
         /// <summary>
