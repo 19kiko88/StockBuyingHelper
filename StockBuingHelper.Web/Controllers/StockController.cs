@@ -88,7 +88,7 @@ namespace StockBuingHelper.Web.Controllers
 
 
                 #region get Revenue
-                var listRevenue = await _stockService.GetRevenue(listPe, 3);
+                var listRevenue = await _stockService.GetRevenue(listPe, 6);
                 #endregion
 
 

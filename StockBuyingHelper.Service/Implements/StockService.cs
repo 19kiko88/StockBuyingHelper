@@ -600,11 +600,11 @@ namespace StockBuyingHelper.Service.Implements
                     //c.VolumeDatas.Take(3).Where(c => c.volumeK > 500).Any() &&
                      (c.Type == StockType.ESVUFR
                         && (
-                            //c.EPS > 0 && c.PE < 25
-                            //&& (
+                                    //c.EPS > 0 && c.PE < 25
+                                    //&& (
                                     //(c.RevenueDatas[0].MOM > 0 || c.RevenueDatas[1].MOM > 0 || c.RevenueDatas[2].MOM > 0) 
-                                    c.RevenueDatas.Take(3).Where(c => c.mom > 0).Count() >= 2
-                                    ||
+                                    c.RevenueDatas.Where(c => c.monthYOY > 0).Count() >= 3
+                                    &&
                                     (
                                         c.RevenueDatas[0].yoy > 0 //|| 
                                                                   //(c.RevenueDatas[0].YOY > 0 && (c.RevenueDatas[0].YOY > c.RevenueDatas[1].YOY && c.RevenueDatas[1].YOY > c.RevenueDatas[2].YOY))
@@ -622,6 +622,8 @@ namespace StockBuyingHelper.Service.Implements
 
             /*
              * 選股條件：
+             * https://www.ptt.cc/bbs/Stock/M.1680899841.A.5F6.html
+             * https://www.ptt.cc/bbs/Stock/M.1468072684.A.DD1.html
              * 1.長期(1年)：VTI大於800 
              * 2.長期(近四季)：EPS > 0 && PE < 25
              * 3.中長期(近一季)：MoM至少有兩個月為正 || (最新(YoY)當月累計營收要比去年累計營收高 || YoY逐步轉正)
