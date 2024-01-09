@@ -36,6 +36,9 @@ namespace StockBuyingHelper.Service.Models
         /// 備註
         /// </summary>
         public string Note { get; set; }
-
+        /// <summary>
+        /// 成交價格
+        /// </summary>
+        public decimal Price { get; set; }
     }
 }

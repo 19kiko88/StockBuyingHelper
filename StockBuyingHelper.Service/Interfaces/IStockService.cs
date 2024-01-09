@@ -10,14 +10,40 @@ namespace StockBuyingHelper.Service.Interfaces
 {
     public interface IStockService
     {
-        public bool SpecificStockId { get; set; }
+        public bool IgnoreFilter { get; set; }
+
         /// <summary>
         /// 取得台股清單(上市.櫃)
         /// </summary>
         /// <returns></returns>
         public Task<List<StockInfoModel>> GetStockList();
 
-        public Task<List<StockInfoModel>> GetFilterStockList(bool queryEtfs, List<string> specificIds = null);
+        /// <summary>
+        /// 篩選台股清單(上市.櫃)
+        /// </summary>
+        /// <param name="queryEtfs">是否顯示ETF個股</param>
+        /// <param name="specificIds">指定股票代碼</param>
+        /// <returns></returns>
+        public Task<List<StockInfoModel>> GetFilterStockList(bool queryEtfs, List<string>? specificIds = null);
+
+        /// <summary>
+        /// 取得即時價格
+        /// </summary>
+        /// <param name="specificIds">指定特定股票代碼</param>
+        /// <param name="taskCount">多執行緒的Task數量</param>
+        /// <returns></returns>
+        public Task<List<StockPriceInfoModel>> GetPrice(List<string>? specificIds = null, int taskCount = 25);
+
+        public Task<List<StockInfoModel>> GteStockInfo(List<string>? filterIds, bool queryEtfs, decimal priceLow = 0, decimal priceHigh = 99999);
+
+        /// <summary>
+        /// 篩選即時價格
+        /// </summary>
+        /// <param name="specificIds">指定特定股票代碼</param>
+        /// <param name="priceLow">價格區間下限</param>
+        /// <param name="priceHigh">價格區間上限</param>
+        /// <returns></returns>
+        public Task<List<StockPriceInfoModel>> GetFilterPrice(List<string>? specificIds = null, decimal priceLow = 0, decimal priceHigh = 200);
 
         /// <summary>
         /// 取得52周間最高 & 最低價(非最終成交價)
@@ -25,36 +51,41 @@ namespace StockBuyingHelper.Service.Interfaces
         /// <param name="realTimeData">即時成交價</param>
         /// <param name="taskCount">多執行緒的Task數量</param>
         /// <returns></returns>
-        public Task<List<StockHighLowIn52WeeksInfoModel>> GetHighLowIn52Weeks(List<StockPriceInfoModel> realTimeData, int taskCount = 25);
-
-        /// <summary>
-        /// 每日成交量資訊
-        /// </summary>
-        /// <param name="data">資料來源</param>
-        /// <param name="txDateCount">交易日(3~10)</param>
-        /// <param name="taskCount">多執行緒數量</param>
-        /// <returns></returns>
-        public Task<List<StockVolumeInfoModel>> GetVolume(List<VtiInfoModel> data, int txDateCount = 10, int taskCount = 25);
-
-        public Task<List<StockVolumeInfoModel>> GetFilterVolumeList(List<VtiInfoModel> vtiData, int volumeKLimit, int? txDateCount = 10, int? taskCount = 25);
-
-        /// <summary>
-        /// 取得即時價格
-        /// </summary>
-        /// <returns></returns>
-        public Task<List<StockPriceInfoModel>> GetPrice(List<string> specificIds = null, int taskCount = 25);
-
-        public Task<List<StockPriceInfoModel>> GetFilterPriceList(List<string> specificIds = null, decimal? priceLow = 0, decimal? priceHigh = 200);
+        public Task<List<StockHighLowIn52WeeksInfoModel>> GetHighLowIn52Weeks(List<StockInfoModel> realTimeData, int taskCount = 25);
 
         /// <summary>
         /// 取得近52周最高最低價格區間內，目前價格離最高價還有多少百分比，並換算成vti係數(vti越高，表示離52周區間內最高點越近)
         /// </summary>
-        /// <param name="priceData">即時價格資料</param>
         /// <param name="highLowData">取得52周間最高 & 最低價資料(非最終成交價)</param>
-        /// <param name="amountLimit">vti篩選，vti值必須在多少以上</param>
         /// <returns></returns>
-        public Task<List<VtiInfoModel>> GetVTI(List<StockPriceInfoModel> priceData, List<StockHighLowIn52WeeksInfoModel> highLowData);
-        public Task<List<VtiInfoModel>> GetFilterVTI(List<StockPriceInfoModel> priceData, List<StockHighLowIn52WeeksInfoModel> highLowData, int? amountLimit = 0);
+        public Task<List<StockVtiInfoModel>> GetVTI(List<StockHighLowIn52WeeksInfoModel> highLowData);
+
+        /// <summary>
+        /// 篩選vti係數
+        /// </summary>
+        /// <param name="highLowData">取得52周間最高 & 最低價資料(非最終成交價)</param>
+        /// <param name="amountLimit">vti轉換後的購買股數</param>
+        /// <returns></returns>
+        public Task<List<StockVtiInfoModel>> GetFilterVTI(List<StockHighLowIn52WeeksInfoModel> highLowData, int amountLimit = 0);
+
+        /// <summary>
+        /// 每日成交量資訊
+        /// </summary>
+        /// <param name="vtiDataIds">資料來源</param>
+        /// <param name="txDateCount">交易日</param>
+        /// <param name="taskCount">多執行緒數量</param>
+        /// <returns></returns>
+        public Task<List<StockVolumeInfoModel>> GetVolume(List<string> vtiDataIds, int txDateCount = 10, int taskCount = 25);
+
+        /// <summary>
+        /// 篩選每日成交量資訊
+        /// </summary>
+        /// <param name="vtiDataIds">資料來源</param>
+        /// <param name="volumeKLimit">成交量</param>
+        /// <param name="txDateCount">顯示交易日</param>
+        /// <param name="taskCount">多執行緒數量</param>
+        /// <returns></returns>
+        public Task<List<StockVolumeInfoModel>> GetFilterVolume(List<string> vtiDataIds, int volumeKLimit = 500, int txDateCount = 5, int taskCount = 25);
 
         /// <summary>
         /// 取得本益比(PE) & 近四季EPS
@@ -63,18 +94,35 @@ namespace StockBuyingHelper.Service.Interfaces
         /// <param name="data">資料來源</param>
         /// <param name="taskCount">多執行緒的Task數量</param>
         /// <returns></returns>
-        public Task<List<PeInfoModel>> GetPE(List<StockInfoDto> data, int taskCount = 25);
+        public Task<List<PeInfoModel>> GetPE(List<StockInfoModel> data, int taskCount = 25);
 
-        public Task<List<PeInfoModel>> GetFilterPeList(List<StockInfoDto> data, decimal? eps = 0, double? pe = 25, int taskCount = 25);
+        /// <summary>
+        /// 篩選本益比(PE) & 近四季EPS
+        /// </summary>
+        /// <param name="data">資料來源</param>
+        /// <param name="eps">近四季EPS篩選條件</param>
+        /// <param name="pe">近四季PE篩選條件</param>
+        /// <param name="taskCount">多執行緒的Task數量</param>
+        /// <returns></returns>
+        public Task<List<PeInfoModel>> GetFilterPe(List<StockInfoModel> data, decimal eps = 0, double pe = 25, int taskCount = 25);
 
         /// <summary>
         /// 取得每月MoM. YoY增減趴數
         /// </summary>
         /// <param name="data">資料來源</param>
-        /// <param name="taskCount">多執行緒的Task數量</param>
+        /// <param name="revenueMonthCount">顯示營收資料筆數(by 月)</param>
+        /// <param name="taskCount">多執行緒數量</param>
         /// <returns></returns>
-        public Task<List<RevenueInfoModel>> GetRevenue(List<PeInfoModel> data, int revenueMonthCount = 3, int taskCount = 25);
+        public Task<List<RevenueInfoModel>> GetRevenue(List<StockInfoModel> data, int revenueMonthCount = 3, int taskCount = 25);
 
+        /// <summary>
+        /// 篩選取得每月MoM. YoY增減趴數
+        /// </summary>
+        /// <param name="data">資料來源</param>
+        /// <param name="revenueMonthCount">顯示營收資料筆數(by 月)</param>
+        /// <param name="taskCount">多執行緒數量</param>
+        /// <returns></returns>
+        public Task<List<RevenueInfoModel>> GetFilterRevenue(List<StockInfoModel> data, int revenueMonthCount = 3, int taskCount = 25);
 
         /// <summary>
         /// 取得總表
@@ -84,9 +132,9 @@ namespace StockBuyingHelper.Service.Interfaces
         /// <param name="peData">近四季EPS&PE資料</param>
         /// <param name="revenueData">近三個月營收MoM. YoY資料</param>
         /// <returns></returns>
-        public Task<List<BuyingResultModel>> GetBuyingResult(List<StockInfoModel> stockData, List<VtiInfoModel> vtiData, List<PeInfoModel> peData, List<RevenueInfoModel> revenueData, List<StockVolumeInfoModel> volumeData, string specificStockId = "");
+        public Task<List<BuyingResultModel>> GetBuyingResult(List<StockInfoModel> stockData, List<StockVtiInfoModel> vtiData, List<PeInfoModel> peData, List<RevenueInfoModel> revenueData, List<StockVolumeInfoModel> volumeData, string specificStockId = "");
 
         [Obsolete("近四季EPS取得，改由GetPE從Yahoo Stock取得")]
-        public Task<List<ObsoleteEpsInfoModel>> GetEPS(List<VtiInfoModel> data);
+        public Task<List<ObsoleteEpsInfoModel>> GetEPS(List<StockVtiInfoModel> data);
     }
 }

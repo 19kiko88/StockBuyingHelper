@@ -10,7 +10,7 @@ namespace StockBuyingHelper.Service.Models
     public class StockVolumeInfoModel
     {
         public string StockId { get; set; }
-        public string StockName { get; set; }
+        //public string StockName { get; set; }
         public List<VolumeData> VolumeInfo { get; set; }
     }
 
