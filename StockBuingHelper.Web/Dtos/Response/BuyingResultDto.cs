@@ -17,5 +17,6 @@ namespace StockBuingHelper.Web.Dtos.Response
         public List<VolumeData> volumeDatas { get; set; }
         public double vti { get; set; }
         public int amount { get; set; }
+        public string cfiCode { get; set; }
     }
 }

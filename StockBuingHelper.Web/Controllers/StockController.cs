@@ -27,6 +27,7 @@ namespace StockBuingHelper.Web.Controllers
         {
             var sw = new Stopwatch();
             var res = new Result<List<BuyingResultDto>>();
+            var yahooApiRequestCount = 0;
 
             try
             {
@@ -80,26 +81,37 @@ namespace StockBuingHelper.Web.Controllers
                 var list52HighLow = await _stockService.GetHighLowIn52Weeks(listStockInfo);
 
                 //篩選條件2：vti(reqData.vtiIndex) > 800
-                var listVti = await _stockService.GetFilterVTI(list52HighLow, reqData.vtiIndex);
-                var vtiFilterds = listVti.Select(c => c.StockId).ToList();
+                /*
+                 * 改用Result取代await，block執行緒。避免非同步先執行
+                 * ref：
+                 * https://www.huanlintalk.com/2016/01/async-and-await.html
+                 * https://www.52x7.com/index.php/2022/08/19/csharp-async-await-exec-sequence/
+                 */
+                var listVti = _stockService.GetFilterVTI(list52HighLow, reqData.vtiIndex).Result;
+                var vtiFilterIds = listVti.Select(c => c.StockId).ToList();
 
                 #region Yahoo API(要減少Request次數，變免被block)
 
                 #region get Volume
                 //篩選條件3：查詢的交易日範圍內，平均成交量大於500
-                var listVolume = await _stockService.GetFilterVolume(vtiFilterds, reqData.volume.Value, reqData.volumeTxDateInterval.Value);
-                var volumeFilterData = listStockInfo.Where(c => listVolume.Select(cc => cc.StockId).Contains(c.StockId)).ToList();
+                var listVolume = _stockService.GetFilterVolume(vtiFilterIds, reqData.volume.Value, reqData.volumeTxDateInterval.Value).Result;
+                var volumeIds = listVolume.Select(cc => cc.StockId);
+                var volumeFilterData = listStockInfo.Where(c => volumeIds.Contains(c.StockId)).ToList();
+                yahooApiRequestCount += vtiFilterIds.Count;
                 #endregion
 
                 #region get EPS & PE
                 //篩選條件4：近四季eps>0, pe<=25。縮小資料範圍
-                var listPe = await _stockService.GetFilterPe(volumeFilterData, reqData.epsAcc4Q.Value, reqData.pe.Value);
-                var peFilterData = listStockInfo.Where(c => listPe.Select(cc => cc.StockId).Contains(c.StockId)).ToList();
+                var listPe = _stockService.GetFilterPe(volumeFilterData, reqData.epsAcc4Q.Value, reqData.pe.Value).Result;
+                var peIds = listPe.Select(cc => cc.StockId);
+                var peFilterData = listStockInfo.Where(c => peIds.Contains(c.StockId)).ToList();
+                yahooApiRequestCount += volumeFilterData.Count;
                 #endregion
 
                 #region get Revenue
                 //篩選條件5：近6個月的月營收YoY只少要有3個月為正成長 && 最新的YoY必須要大於0
                 var listRevenue = await _stockService.GetFilterRevenue(peFilterData, 6);
+                yahooApiRequestCount += peFilterData.Count;
                 #endregion
 
                 #endregion
@@ -124,9 +136,12 @@ namespace StockBuingHelper.Web.Controllers
                          revenueDatas = revenue.RevenueData,
                          volumeDatas = volume.VolumeInfo,
                          vti = vti.VTI,
-                         amount = vti.Amount
+                         amount = vti.Amount,
+                         cfiCode = stockInfo.CFICode
                      }
-                    ).ToList();
+                    )
+                    .OrderByDescending(o => o.cfiCode).ThenByDescending(o => o.amount)
+                    .ToList();
 
                 var idx = 0;
                 foreach (var item in res.Content)
@@ -143,7 +158,7 @@ namespace StockBuingHelper.Web.Controllers
             }
 
             sw.Stop();
-            res.Message += $"Run time：{Math.Round(Convert.ToDouble(sw.ElapsedMilliseconds / 1000), 2)}(s)。";
+            res.Message += $"Run time：{Math.Round(Convert.ToDouble(sw.ElapsedMilliseconds / 1000), 2)}(s)。YahooApiReqestCount：{yahooApiRequestCount}。";
             res.Success = true;
 
             return res;
