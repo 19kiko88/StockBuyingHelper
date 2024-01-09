@@ -14,7 +14,6 @@ import { ResGetVtiDto } from 'src/app/modules/shared/dtos/response/res-get-vti-d
 
 export class MainComponent implements OnInit 
 {
-  vtiResult:ResGetVtiDto[] = [];
   vtiRange: number = 800;
   form!:FormGroup;
   vtiRes:ResGetVtiDto[] = [];
@@ -46,9 +45,9 @@ export class MainComponent implements OnInit
     this._sbhService.GetVtiData(data).subscribe({
        next: res => 
        {
-        this.vtiResult = res;
-        this.vtiRes = res;
+        this.vtiRes = res.content;
         this._loadingService.setLoading(false);
+        window.alert(res.message);
        },
        error: err =>
        {

@@ -19,13 +19,12 @@ export class SbhService extends BaseService{
     super();
    }
 
-  GetVtiData(data: ReqGetVtiDto):Observable<ResGetVtiDto[]>
+  GetVtiData(data: ReqGetVtiDto):Observable<IResultDto<ResGetVtiDto[]>>
   {
     const url = `${environment.apiBaseUrl}/Stock/GetVtiData`;
     const options = this.generatePostOptions();    
 
-    return this._httpClient.post<IResultDto<ResGetVtiDto[]>>(url, data, options).pipe(
-      map( res => this.processResult(res))
-    );
+    return this._httpClient.post<IResultDto<ResGetVtiDto[]>>(url, data, options);
+    //.pipe(map( res => this.processResult(res)));
   }
 }
