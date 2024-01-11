@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.HttpOverrides;
 using StockBuyingHelper.Service.Implements;
 using StockBuyingHelper.Service.Interfaces;
 
@@ -6,6 +7,10 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 
 builder.Services.AddControllers();
+builder.Services.AddSpaStaticFiles(configuration =>
+{
+    configuration.RootPath = "wwwroot";
+});
 builder.Services.AddScoped<IStockService, StockService>();
 
 /*CORS*/
@@ -28,6 +33,10 @@ if (builder.Environment.IsDevelopment())
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+});
 
 app.UseHttpsRedirection();
 
@@ -40,5 +49,24 @@ if (app.Environment.IsDevelopment())
 }
 
 app.MapControllers();
+app.UseSpaStaticFiles();
+
+/*
+ *UseSpa() returns index.html from API instead of 404
+ *ref¡Ghttps://stackoverflow.com/questions/67625133/usespa-returns-index-html-from-api-instead-of-404
+ *
+ *ref¡Ghttps://www.cnblogs.com/dudu/p/16686077.html
+ */
+app.MapWhen(x => !x.Request.Path.Value.StartsWith("/api"), builder =>
+{
+    builder.UseSpa(spa =>
+    {
+        spa.Options.SourcePath = $"wwwroot";
+        if (app.Environment.IsDevelopment())
+        {
+            spa.UseProxyToSpaDevelopmentServer("http://localhost:4200");
+        }
+    });
+});
 
 app.Run();

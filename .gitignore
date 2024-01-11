@@ -427,3 +427,4 @@ bin
 obj
 .vs
 ignore_files
+/StockBuingHelper.Web/wwwroot

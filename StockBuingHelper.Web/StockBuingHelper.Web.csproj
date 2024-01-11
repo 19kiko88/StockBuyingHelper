@@ -19,6 +19,19 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Remove="Properties\PublishProfiles\FolderProfile.pubxml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <_WebToolingArtifacts Remove="Properties\PublishProfiles\Development.pubxml" />
+    <_WebToolingArtifacts Remove="Properties\PublishProfiles\Production.pubxml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.SpaServices.Extensions" Version="7.0.15" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\StockBuyingHelper.Models\StockBuyingHelper.Models.csproj" />
     <ProjectReference Include="..\StockBuyingHelper.Service\StockBuyingHelper.Service.csproj" />
   </ItemGroup>
