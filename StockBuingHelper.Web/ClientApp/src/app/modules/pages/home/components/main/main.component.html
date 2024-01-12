@@ -117,7 +117,7 @@
                     <ng-template pTemplate="header">
                         <tr>
                             <th pSortableColumn="txDate">交易日 <p-sortIcon field="txDate"></p-sortIcon></th>
-                            <th pSortableColumn="foreignSellVolK">外資成交量 <p-sortIcon field="foreignSellVolK"></p-sortIcon></th>
+                            <th pSortableColumn="foreignDiffVolK">外資成交量 <p-sortIcon field="foreignDiffVolK"></p-sortIcon></th>
                             <th pSortableColumn="dealerDiffVolK">自營成交量 <p-sortIcon field="dealerDiffVolK"></p-sortIcon></th>
                             <th pSortableColumn="investmentTrustDiffVolK">投信成交量 <p-sortIcon field="investmentTrustDiffVolK"></p-sortIcon></th>
                             <th pSortableColumn="volumeK">總量 <p-sortIcon field="volumeK"></p-sortIcon></th>
@@ -126,7 +126,7 @@
                     <ng-template pTemplate="body" let-volumeDatas>
                         <tr>
                             <td>{{ volumeDatas.txDate }}</td>
-                            <td>{{ volumeDatas.foreignSellVolK }}</td>
+                            <td>{{ volumeDatas.foreignDiffVolK }}</td>
                             <td>{{ volumeDatas.dealerDiffVolK }}</td>
                             <td>{{ volumeDatas.investmentTrustDiffVolK }}</td>
                             <td>{{ volumeDatas.volumeK }}</td>

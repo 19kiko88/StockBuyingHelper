@@ -134,6 +134,8 @@ namespace StockBuyingHelper.Service.Interfaces
         /// <returns></returns>
         public Task<List<BuyingResultModel>> GetBuyingResult(List<StockInfoModel> stockData, List<StockVtiInfoModel> vtiData, List<PeInfoModel> peData, List<RevenueInfoModel> revenueData, List<StockVolumeInfoModel> volumeData, string specificStockId = "");
 
+        public Task<List<StockVolumeInfoModel>> GetVolDetail();
+
         [Obsolete("近四季EPS取得，改由GetPE從Yahoo Stock取得")]
         public Task<List<ObsoleteEpsInfoModel>> GetEPS(List<StockVtiInfoModel> data);
     }

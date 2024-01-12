@@ -1,7 +1,8 @@
-﻿using System.Text;
+﻿using System.Data;
+using System.Data.SqlClient;
+using System.Text;
 using System.Text.Json;
 using AngleSharp;
-using StockBuyingHelper.Service.Dtos;
 using StockBuyingHelper.Service.Interfaces;
 using StockBuyingHelper.Service.Models;
 using StockBuyingHelper.Service.Utility;
@@ -374,7 +375,7 @@ namespace StockBuyingHelper.Service.Implements
                                     txDate = DateOnly.FromDateTime(Convert.ToDateTime(c.formattedDate)),
                                     dealerDiffVolK = c.dealerDiffVolK,
                                     investmentTrustDiffVolK = c.investmentTrustDiffVolK,
-                                    foreignSellVolK = c.foreignDiffVolK,
+                                    foreignDiffVolK = c.foreignDiffVolK,
                                     volumeK = Convert.ToInt32(c.volumeK)
                                 }).ToList()
                             };
@@ -384,6 +385,42 @@ namespace StockBuyingHelper.Service.Implements
                             lock (_lock)
                             {
                                 res.Add(volumeInfo);
+
+//                                string ConnectionString = @"Server=128.199.104.115,1433;Database=SBH;User Id=sa;Password=1qaz@WSXHao@123;";
+//                                string strSQL = @"
+//insert into Volume_Detail
+//(Stock_Id, Tx_Date, Foreign_Sell_VolK, Dealer_Diff_VolK, InvestmentTrust_Diff_VolK, VolumeK) 
+//values 
+//(@Stock_Id, @Tx_Date, @Foreign_Sell_VolK, @Dealer_Diff_VolK, @InvestmentTrust_Diff_VolK, @VolumeK);
+//";
+//                                var stockId = volumeInfo.StockId;
+//                                //foreach (var item in volumeInfo.VolumeInfo)
+//                                //{
+//                                    using (var cn = new SqlConnection(ConnectionString))
+//                                    {
+//                                        cn.Open();
+//                                        foreach (var item in volumeInfo.VolumeInfo)
+//                                        {
+//                                            using (SqlCommand cmd = new SqlCommand(strSQL, cn))
+//                                            {
+//                                                cmd.Parameters.Add("@Stock_Id", System.Data.SqlDbType.VarChar).Value = stockId;
+//                                                cmd.Parameters.Add("@Tx_Date", System.Data.SqlDbType.Date).Value = item.txDate;
+//                                                cmd.Parameters.Add("@Foreign_Sell_VolK", System.Data.SqlDbType.Int).Value = item.foreignDiffVolK;
+//                                                cmd.Parameters.Add("@Dealer_Diff_VolK", System.Data.SqlDbType.Int).Value = item.dealerDiffVolK;
+//                                                cmd.Parameters.Add("@InvestmentTrust_Diff_VolK", System.Data.SqlDbType.Int).Value = item.investmentTrustDiffVolK;
+//                                                cmd.Parameters.Add("@VolumeK", System.Data.SqlDbType.Int).Value = item.volumeK;
+
+//                                                // open connection, execute INSERT, close connection
+//                                                //cn.Open();
+//                                                cmd.ExecuteNonQuery();
+//                                                cn.Close();
+//                                            }
+//                                        }
+
+//                                    }
+//                                //}
+
+
                             }
                         }
                     }
@@ -405,39 +442,39 @@ namespace StockBuyingHelper.Service.Implements
         /// <returns></returns>
         public async Task<List<StockVolumeInfoModel>> GetFilterVolume(List<string> vtiDataIds, int volumeKLimit = 500, int txDateCount = 10, int taskCount = 25)
         {
-            //var res = new List<StockVolumeInfoModel>();
+            var res = new List<StockVolumeInfoModel>();
 
-            //var noVolumeInfoData = vtiData.GroupJoin(lockVolumeObj, a => a.StockId, b => b.StockId, (a, b) => new
-            //{
-            //    a.StockId,
-            //    a.StockName,
-            //    b
-            //}).SelectMany(c => c.b.DefaultIfEmpty(), (c, b) => new
-            //{
-            //    c.StockId,
-            //    c.StockName,
-            //    hasVolumeData = (b == null ? false : true)
-            //});
+            var dbVolume = await GetVolDetail();
 
-            //var newData = new List<StockInfoDto>();
-            //foreach (var item in noVolumeInfoData)
-            //{
-            //    if (item.hasVolumeData)
-            //    {
-            //        var oldData = lockVolumeObj.Where(c => c.StockId == item.StockId).FirstOrDefault();
-            //        if (oldData != null)
-            //        {
-            //            res.Add(oldData);//記憶體已經有volume資料，直接add到model
-            //        }
-            //    }
-            //    else
-            //    {
-            //        newData.Add(new StockInfoDto() { StockId = item.StockId, StockName = item.StockName });//記憶體還沒有volume資料的newData，要透過yahoo api取得volume相關資料
-            //    }
-            //}
+            var noVolumeInfoData = (vtiDataIds.GroupJoin(dbVolume, a => a, b => b.StockId, (a, b) => new
+            {
+                a,
+                b
+            }).SelectMany(c => c.b.DefaultIfEmpty(), (c, b) => new
+            {
+                StockId = c.a,
+                hasVolumeData = (b == null ? false : true)
+            })).ToList();
 
-            //var newDataVolumeInfo = await GetVolume(newData, txDateCount.Value, taskCount.Value);
-            //res.AddRange(newDataVolumeInfo);//api取得的結果加入到model
+            var newData = new List<string>();
+            foreach (var item in noVolumeInfoData)
+            {
+                if (item.hasVolumeData)
+                {
+                    var oldData = dbVolume.Where(c => c.StockId == item.StockId).FirstOrDefault();
+                    if (oldData != null)
+                    {
+                        res.Add(oldData);//記憶體已經有volume資料，直接add到model
+                    }
+                }
+                else
+                {
+                    newData.Add(item.StockId);//記憶體還沒有volume資料的newData，要透過yahoo api取得volume相關資料
+                }
+            }
+
+            var newDataVolumeInfo = await GetVolume(newData, txDateCount, taskCount);
+            res.AddRange(newDataVolumeInfo);//api取得的結果加入到model
 
             //lock (lockVolumeObj)
             //{
@@ -449,7 +486,7 @@ namespace StockBuyingHelper.Service.Implements
             //    }
             //}
 
-            var res = await GetVolume(vtiDataIds, txDateCount, taskCount);
+            //var res = await GetVolume(vtiDataIds, txDateCount, taskCount);
 
             if (IgnoreFilter == false)
             {
@@ -768,6 +805,73 @@ namespace StockBuyingHelper.Service.Implements
                 });
             }
             Task.WaitAll(tasks);
+
+            return res;
+        }
+
+        public async Task<List<StockVolumeInfoModel>> GetVolDetail()
+        {
+            var res = new List<StockVolumeInfoModel>() { };
+            string ConnectionString = @"Server=128.199.104.115,1433;Database=SBH;User Id=sa;Password=1qaz@WSXHao@123;";
+            string strSQL = @"select *from Volume_Detail with(nolock)";
+
+            using (var cn = new SqlConnection(ConnectionString))
+            {
+                cn.Open();
+                using (SqlCommand cmd = new SqlCommand(strSQL, cn))
+                {
+                    //cmd.Parameters.Add("@id", System.Data.SqlDbType.VarChar).Value = userId;
+                    //1.回傳DataSet or DataTable 
+                    using (SqlDataAdapter adpter = new SqlDataAdapter(cmd))
+                    {
+                        var ds = new DataSet();
+                        adpter.Fill(ds);
+                        var dt = ds.Tables[0];
+
+                        var currentId = "";
+                        var volumeData = new List<VolumeData>();
+                        var cnt = 0;
+                        foreach (DataRow dr in dt.Rows)
+                        {
+                            cnt++;
+                            if (string.IsNullOrEmpty(currentId))
+                            {
+                                currentId = dr["Stock_Id"].ToString();
+                            }
+
+                            if (currentId != dr["Stock_Id"].ToString())
+                            {
+                                res.Add(new StockVolumeInfoModel()
+                                {
+                                    StockId = currentId,
+                                    VolumeInfo = volumeData
+                                });
+
+                                currentId = dr["Stock_Id"].ToString();
+                                volumeData = new List<VolumeData>();
+                            }
+
+                            volumeData.Add(new VolumeData()
+                            {
+                                txDate = DateOnly.FromDateTime(Convert.ToDateTime(dr["Tx_Date"].ToString())),
+                                foreignDiffVolK = (int)dr["Foreign_Sell_VolK"],
+                                dealerDiffVolK = (int)dr["Dealer_Diff_VolK"],
+                                investmentTrustDiffVolK = (int)dr["InvestmentTrust_Diff_VolK"],
+                                volumeK = (int)dr["VolumeK"],
+                            });
+
+                            if (cnt == dt.Rows.Count)
+                            {
+                                res.Add(new StockVolumeInfoModel()
+                                {
+                                    StockId = currentId,
+                                    VolumeInfo = volumeData
+                                });
+                            }
+                        }
+                    }
+                }
+            }
 
             return res;
         }

@@ -23,7 +23,7 @@ export interface ResGetVtiDto {
   
   export interface VolumeData {
     txDate: string
-    foreignSellVolK: number
+    foreignDiffVolK: number
     dealerDiffVolK: number
     investmentTrustDiffVolK: number
     volumeK: number
