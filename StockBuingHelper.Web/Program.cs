@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.HttpOverrides;
+using StockBuyingHelper.Models;
 using StockBuyingHelper.Service.Implements;
 using StockBuyingHelper.Service.Interfaces;
 
@@ -11,7 +12,9 @@ builder.Services.AddSpaStaticFiles(configuration =>
 {
     configuration.RootPath = "wwwroot";
 });
+builder.Services.Configure<AppSettings.ConnectionStrings>(builder.Configuration.GetSection(AppSettings._ConnectionStrings));
 builder.Services.AddScoped<IStockService, StockService>();
+builder.Services.AddScoped<IVolumeService, VolumeService>();
 
 /*CORS*/
 if (builder.Environment.IsDevelopment())

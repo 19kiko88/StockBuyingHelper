@@ -34,6 +34,14 @@ namespace StockBuyingHelper.Service.Interfaces
         /// <returns></returns>
         public Task<List<StockPriceInfoModel>> GetPrice(List<string>? specificIds = null, int taskCount = 25);
 
+        /// <summary>
+        /// 取得個股基本資料 & 價格
+        /// </summary>
+        /// <param name="filterIds"></param>
+        /// <param name="queryEtfs"></param>
+        /// <param name="priceLow"></param>
+        /// <param name="priceHigh"></param>
+        /// <returns></returns>
         public Task<List<StockInfoModel>> GteStockInfo(List<string>? filterIds, bool queryEtfs, decimal priceLow = 0, decimal priceHigh = 99999);
 
         /// <summary>
@@ -85,7 +93,7 @@ namespace StockBuyingHelper.Service.Interfaces
         /// <param name="txDateCount">顯示交易日</param>
         /// <param name="taskCount">多執行緒數量</param>
         /// <returns></returns>
-        public Task<List<StockVolumeInfoModel>> GetFilterVolume(List<string> vtiDataIds, int volumeKLimit = 500, int txDateCount = 5, int taskCount = 25);
+        public Task<Tuple<List<StockVolumeInfoModel>, List<StockVolumeInfoModel>>> GetFilterVolume(List<string> vtiDataIds, int volumeKLimit = 500, int txDateCount = 10, int taskCount = 25);
 
         /// <summary>
         /// 取得本益比(PE) & 近四季EPS
@@ -124,6 +132,7 @@ namespace StockBuyingHelper.Service.Interfaces
         /// <returns></returns>
         public Task<List<RevenueInfoModel>> GetFilterRevenue(List<StockInfoModel> data, int revenueMonthCount = 3, int taskCount = 25);
 
+        [Obsolete("減少yahoo api發送request次數，改成逐步篩選")]
         /// <summary>
         /// 取得總表
         /// </summary>
@@ -133,8 +142,6 @@ namespace StockBuyingHelper.Service.Interfaces
         /// <param name="revenueData">近三個月營收MoM. YoY資料</param>
         /// <returns></returns>
         public Task<List<BuyingResultModel>> GetBuyingResult(List<StockInfoModel> stockData, List<StockVtiInfoModel> vtiData, List<PeInfoModel> peData, List<RevenueInfoModel> revenueData, List<StockVolumeInfoModel> volumeData, string specificStockId = "");
-
-        public Task<List<StockVolumeInfoModel>> GetVolDetail();
 
         [Obsolete("近四季EPS取得，改由GetPE從Yahoo Stock取得")]
         public Task<List<ObsoleteEpsInfoModel>> GetEPS(List<StockVtiInfoModel> data);

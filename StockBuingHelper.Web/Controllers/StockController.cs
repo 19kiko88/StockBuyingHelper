@@ -5,6 +5,7 @@ using StockBuyingHelper.Models.Models;
 using StockBuyingHelper.Service.Interfaces;
 using StockBuyingHelper.Service.Models;
 using System.Diagnostics;
+using System.Text;
 
 namespace StockBuingHelper.Web.Controllers
 {
@@ -14,11 +15,13 @@ namespace StockBuingHelper.Web.Controllers
     public class StockController : ControllerBase
     {
         private readonly IStockService _stockService;
+        private readonly IVolumeService _volumeService;
         private static List<StockVolumeInfoModel> lockVolumeObj = new List<StockVolumeInfoModel>();
 
-        public StockController(IStockService stockService)
+        public StockController(IStockService stockService, IVolumeService volumeService)
         {
             _stockService = stockService;
+            _volumeService = volumeService;
         }
 
         [HttpPost]
@@ -27,6 +30,7 @@ namespace StockBuingHelper.Web.Controllers
             var sw = new Stopwatch();
             var res = new Result<List<BuyingResultDto>>();
             var yahooApiRequestCount = 0;
+            var runLog = new StringBuilder();
 
             try
             {
@@ -76,8 +80,10 @@ namespace StockBuingHelper.Web.Controllers
 
                 //篩選條件1：股價0~200
                 var listStockInfo = await _stockService.GteStockInfo(filterIds, reqData.queryEtfs, reqData.priceLow.Value, reqData.priceHigh.Value);
+                runLog.Append("GteStockInfo done。");
 
                 var list52HighLow = await _stockService.GetHighLowIn52Weeks(listStockInfo);
+                runLog.Append("GetHighLowIn52Weeks done。");
 
                 //篩選條件2：vti(reqData.vtiIndex) > 800
                 /*
@@ -88,15 +94,20 @@ namespace StockBuingHelper.Web.Controllers
                  */
                 var listVti = _stockService.GetFilterVTI(list52HighLow, reqData.vtiIndex).Result;
                 var vtiFilterIds = listVti.Select(c => c.StockId).ToList();
+                runLog.Append("GetFilterVTI done。");
 
                 #region Yahoo API(要減少Request次數，變免被block)
 
                 #region get Volume
                 //篩選條件3：查詢的交易日範圍內，平均成交量大於500
-                var listVolume = _stockService.GetFilterVolume(vtiFilterIds, reqData.volume.Value, reqData.volumeTxDateInterval.Value).Result;
+                var volumeData = _stockService.GetFilterVolume(vtiFilterIds, reqData.volume.Value, reqData.volumeTxDateInterval.Value).Result;
+                var listVolume = volumeData.Item1;
+                var volumeNotInDb = volumeData.Item2;
+                _volumeService.InsertVolumeDetail(volumeNotInDb);
                 var volumeIds = listVolume.Select(cc => cc.StockId);
                 var volumeFilterData = listStockInfo.Where(c => volumeIds.Contains(c.StockId)).ToList();
-                yahooApiRequestCount += vtiFilterIds.Count;
+                yahooApiRequestCount += volumeNotInDb.Count;
+                runLog.Append("GetFilterVolume done。");
                 #endregion
 
                 #region get EPS & PE
@@ -105,12 +116,14 @@ namespace StockBuingHelper.Web.Controllers
                 var peIds = listPe.Select(cc => cc.StockId);
                 var peFilterData = listStockInfo.Where(c => peIds.Contains(c.StockId)).ToList();
                 yahooApiRequestCount += volumeFilterData.Count;
+                runLog.Append("GetFilterPe done。");
                 #endregion
 
                 #region get Revenue
                 //篩選條件5：近6個月的月營收YoY只少要有3個月為正成長 && 最新的YoY必須要大於0
                 var listRevenue = await _stockService.GetFilterRevenue(peFilterData, 6);
                 yahooApiRequestCount += peFilterData.Count;
+                runLog.Append("GetFilterRevenue done。");
                 #endregion
 
                 #endregion
@@ -157,7 +170,7 @@ namespace StockBuingHelper.Web.Controllers
             }
 
             sw.Stop();
-            res.Message += $"Run time：{Math.Round(Convert.ToDouble(sw.ElapsedMilliseconds / 1000), 2)}(s)。YahooApiReqestCount：{yahooApiRequestCount}。";
+            res.Message += $"Run time：{Math.Round(Convert.ToDouble(sw.ElapsedMilliseconds / 1000), 2)}(s)。YahooApiReqestCount：{yahooApiRequestCount}。{runLog}";
             res.Success = true;
 
             return res;
