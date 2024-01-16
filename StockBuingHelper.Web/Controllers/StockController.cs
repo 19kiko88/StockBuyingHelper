@@ -166,7 +166,9 @@ namespace StockBuingHelper.Web.Controllers
             }
             catch (Exception ex)
             {
-                res.Message = ex.Message;
+                res.Message = ex.ToString();
+                sw.Stop();
+                return res;
             }
 
             sw.Stop();
