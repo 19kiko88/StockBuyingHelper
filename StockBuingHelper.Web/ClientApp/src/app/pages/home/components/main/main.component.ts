@@ -1,9 +1,9 @@
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup } from '@angular/forms';
-import { SbhService } from 'src/app/modules/core/http/sbh.service';
-import { LoadingService } from 'src/app/modules/shared/components/loading/loading.service';
-import { ReqGetVtiDto } from 'src/app/modules/shared/dtos/request/req-get-vti-dto';
-import { ResGetVtiDto } from 'src/app/modules/shared/dtos/response/res-get-vti-dto';
+import { SbhService } from 'src/app/core/http/sbh.service';
+import { LoadingService } from 'src/app/shared/components/loading/loading.service';
+import { ReqGetVtiDto } from 'src/app/core/dtos/request/req-get-vti-dto';
+import { ResGetVtiDto } from 'src/app/core/dtos/response/res-get-vti-dto';
 
 
 @Component({

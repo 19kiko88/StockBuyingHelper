@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { IResultDto } from '../../shared/dtos/response/result-dto';
+import { IResultDto } from '../../core/dtos/response/result-dto';
 
 @Injectable({
   providedIn: 'root'

@@ -1,6 +1,7 @@
 import { HomeModule } from './home/home.module';
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { UsersModule } from './users/users.module';
 
 
 
@@ -8,10 +9,12 @@ import { CommonModule } from '@angular/common';
   declarations: [],
   imports: [
     CommonModule,
-    HomeModule
+    HomeModule,
+    UsersModule
   ],
   exports:[
-    HomeModule
+    HomeModule,
+    UsersModule
   ]
 })
 export class PagesModule { }

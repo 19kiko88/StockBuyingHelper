@@ -1,4 +1,4 @@
-export interface ResGetVtiDto {
+export interface ResGetVtiDto{
     sn: string
     stockId: string
     stockName: string

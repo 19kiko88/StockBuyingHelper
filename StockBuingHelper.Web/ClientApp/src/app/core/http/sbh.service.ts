@@ -1,11 +1,11 @@
 import { Injectable } from '@angular/core';
 import { BaseService } from './base.service';
 import { environment } from 'src/environments/environment';
-import { IResultDto } from '../../shared/dtos/response/result-dto';
+import { IResultDto } from '../../core/dtos/response/result-dto';
 import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
-import { ReqGetVtiDto } from '../../shared/dtos/request/req-get-vti-dto';
-import { ResGetVtiDto } from '../../shared/dtos/response/res-get-vti-dto';
+import { ReqGetVtiDto } from '../../core/dtos/request/req-get-vti-dto';
+import { ResGetVtiDto } from '../../core/dtos/response/res-get-vti-dto';
 
 @Injectable({
   providedIn: 'root'

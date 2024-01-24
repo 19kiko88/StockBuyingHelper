@@ -1,4 +1,4 @@
-export interface ReqGetVtiDto 
+export interface ReqGetVtiDto
 {
     specificStockId?: string
     vtiIndex: number;
