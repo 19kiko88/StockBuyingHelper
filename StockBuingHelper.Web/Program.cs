@@ -15,6 +15,8 @@ builder.Services.AddSpaStaticFiles(configuration =>
 builder.Services.Configure<AppSettings.ConnectionStrings>(builder.Configuration.GetSection(AppSettings._ConnectionStrings));
 builder.Services.AddScoped<IStockService, StockService>();
 builder.Services.AddScoped<IVolumeService, VolumeService>();
+builder.Services.AddScoped<IAdminService, AdminService>();
+builder.Services.AddScoped<IAdoNetService, AdoNetService>();
 
 /*CORS*/
 if (builder.Environment.IsDevelopment())

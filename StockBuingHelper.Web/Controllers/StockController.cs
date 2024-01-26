@@ -16,12 +16,14 @@ namespace StockBuingHelper.Web.Controllers
     {
         private readonly IStockService _stockService;
         private readonly IVolumeService _volumeService;
+        private readonly IAdminService _adminService;
         private static List<StockVolumeInfoModel> lockVolumeObj = new List<StockVolumeInfoModel>();
 
-        public StockController(IStockService stockService, IVolumeService volumeService)
+        public StockController(IStockService stockService, IVolumeService volumeService, IAdminService adminService)
         {
             _stockService = stockService;
             _volumeService = volumeService;
+            _adminService = adminService;
         }
 
         [HttpPost]
@@ -42,10 +44,10 @@ namespace StockBuingHelper.Web.Controllers
                     validateMsg += "價格區間錯誤.";
                 }
 
-                if (reqData.vtiIndex < 700)
-                {
-                    validateMsg += "vti至少大(等)於700.";
-                }
+                //if (reqData.vtiIndex < 700)
+                //{
+                //    validateMsg += "vti至少大(等)於700.";
+                //}
 
                 if (!(reqData.volumeTxDateInterval >= 3 && reqData.volumeTxDateInterval <= 10))
                 {
@@ -146,7 +148,7 @@ namespace StockBuingHelper.Web.Controllers
                          eps = pe.EpsAcc4Q,
                          pe = pe.PE,
                          revenueDatas = revenue.RevenueData,
-                         volumeDatas = volume.VolumeInfo,
+                         volumeDatas = volume.VolumeInfo.OrderByDescending(o => o.txDate).ToList(),
                          vti = vti.VTI,
                          amount = vti.Amount,
                          cfiCode = stockInfo.CFICode
@@ -174,6 +176,34 @@ namespace StockBuingHelper.Web.Controllers
             sw.Stop();
             res.Message += $"Run time：{Math.Round(Convert.ToDouble(sw.ElapsedMilliseconds / 1000), 2)}(s)。YahooApiReqestCount：{yahooApiRequestCount}。{runLog}";
             res.Success = true;
+
+            return res;
+        }
+
+        /// <summary>
+        /// 清除db.[Volume_Detail]。重新抓取從Yahoo API抓最新成交資料
+        /// </summary>
+        /// <returns></returns>
+        [HttpDelete]
+        public async Task<Result<int>> DeleteVolumeDetail()
+        {
+            var res = new Result<int>();
+            try
+            {
+                var data = await _adminService.DeleteVolumeDetail();
+                if (string.IsNullOrEmpty(data.errorMsg))
+                {
+                    res.Success = true;
+                }                
+                else 
+                { 
+                    res.Message = data.errorMsg;
+                }
+            }
+            catch (Exception ex)
+            {
+                res.Message = ex.Message;
+            }
 
             return res;
         }
