@@ -4,6 +4,7 @@ import { SideNavComponent } from './layout/side-nav/side-nav.component';
 import { FooterComponent } from './layout/footer/footer.component';
 import { HeaderComponent } from './layout/header/header.component';
 import { HttpClientModule } from '@angular/common/http';
+import { RouterModule } from '@angular/router';
 
 
 
@@ -14,6 +15,7 @@ import { HttpClientModule } from '@angular/common/http';
     HeaderComponent
   ],
   imports: [
+    RouterModule,
     CommonModule,
     HttpClientModule
   ],

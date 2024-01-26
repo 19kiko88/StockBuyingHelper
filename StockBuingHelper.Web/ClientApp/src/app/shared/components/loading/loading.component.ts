@@ -1,4 +1,5 @@
-import { Component, Input } from '@angular/core';
+import { Component } from '@angular/core';
+import { LoadingService } from './loading.service';
 
 @Component({
   selector: 'app-loading',
@@ -7,18 +8,18 @@ import { Component, Input } from '@angular/core';
 })
 export class LoadingComponent {
 
-  @Input() loader: boolean = false;  
-  @Input() loadingMsg: string|undefined = '';
+  loader: boolean = false;  
+  loadingMsg?: string = '';
 
-  constructor() { }
+  constructor(
+    private _loadingService: LoadingService
+  ) { }
 
   ngOnInit(): void {
-    
+    this._loadingService.loader$.subscribe(res =>{
+      this.loader = res.isLoading;
+      this.loadingMsg = res.loadingMessage;
+    })
   }
 
-}
-
-export interface LoadingInfo{
-  isLoading: boolean;
-  loadingMessage?: string;
 }

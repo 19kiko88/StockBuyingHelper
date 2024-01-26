@@ -1,6 +1,5 @@
 import { Injectable } from '@angular/core';
 import { Subject } from 'rxjs';
-import { LoadingInfo } from './loading.component';
 
 @Injectable({
   providedIn: 'root'
@@ -24,3 +23,9 @@ export class LoadingService {
   }
 
 }
+
+export interface LoadingInfo{
+  isLoading: boolean;
+  loadingMessage?: string;
+}
+

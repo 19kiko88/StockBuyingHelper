@@ -1,8 +1,7 @@
 import { HomeModule } from './home/home.module';
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { UsersModule } from './users/users.module';
-
+import { AdminModule } from './admin/admin.module';
 
 
 @NgModule({
@@ -10,11 +9,11 @@ import { UsersModule } from './users/users.module';
   imports: [
     CommonModule,
     HomeModule,
-    UsersModule
+    AdminModule
   ],
   exports:[
     HomeModule,
-    UsersModule
+    AdminModule
   ]
 })
 export class PagesModule { }

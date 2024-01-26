@@ -7,26 +7,11 @@ import { LoadingService } from './shared/components/loading/loading.service';
   styleUrls: ['./app.component.css']
 })
 
-export class AppComponent implements OnInit {
-  title = 'ClientApp';
+export class AppComponent {
+  title = '買股小幫手';
 
   isLoader: boolean = false;
   loadingMsg: string|undefined = '';
 
-  constructor
-  (
-    private _loadingService: LoadingService
-  )
-  {
-
-  }
-
-  ngOnInit(): void 
-  {
-          //Setting Loading
-          this._loadingService.loader$.subscribe(res => {
-            this.isLoader = res.isLoading;
-            this.loadingMsg = res.loadingMessage;
-          })  
-  }
+  constructor() {}
 }

@@ -3,7 +3,7 @@ import { BaseService } from './base.service';
 import { environment } from 'src/environments/environment';
 import { IResultDto } from '../../core/dtos/response/result-dto';
 import { HttpClient } from '@angular/common/http';
-import { Observable, map } from 'rxjs';
+import { Observable } from 'rxjs';
 import { ReqGetVtiDto } from '../../core/dtos/request/req-get-vti-dto';
 import { ResGetVtiDto } from '../../core/dtos/response/res-get-vti-dto';
 
