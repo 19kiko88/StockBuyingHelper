@@ -20,11 +20,19 @@ export class AdminComponent {
     this._loadingService.setLoading(true);
 
     this._adminService.DeleteVolumeDetail().subscribe({
-      next: () => {
-        window.alert('delete done.');
+      next: (res) => {
+        if (res.success)
+        {
+          window.alert('delete done.');
+        }
+        else
+        {
+          window.alert(`delete error. ${res.message}`);
+        }        
         this._loadingService.setLoading(false);
       },
-      error: err => {
+      error: err => 
+      {
         window.alert(`error. ${err}`);
         this._loadingService.setLoading(false);
       }      

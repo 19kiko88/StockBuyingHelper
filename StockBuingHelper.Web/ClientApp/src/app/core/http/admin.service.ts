@@ -18,12 +18,12 @@ export class AdminService extends BaseService {
   }
 
   
-  DeleteVolumeDetail():Observable<boolean>
+  DeleteVolumeDetail():Observable<IResultDto<number>>
   {
     const url = `${environment.apiBaseUrl}/Stock/DeleteVolumeDetail`;
     const options = this.generatePostOptions();    
 
-    return this._httpClient.delete<IResultDto<boolean>>(url, options)
-    .pipe(map( res => this.processResult(res)));
+    return this._httpClient.delete<IResultDto<number>>(url, options);
+    //.pipe(map( res => this.processResult(res)));
   }
 }
