@@ -4,7 +4,7 @@ import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
 import { SharedModule } from './shared/shared.module';
-//import { PagesModule } from './pages/pages.module';
+import { PagesModule } from './pages/pages.module';
 import { CoreModule } from './core/core.module';
 
 
@@ -17,7 +17,7 @@ import { CoreModule } from './core/core.module';
     AppRoutingModule,    
     NgbModule,
     CoreModule,
-    //PagesModule, //LazyLoading不能在AppModule載入PageModule。不然相關元件會在一開始就全被載入，而沒有lazy loading效果
+    PagesModule, //AdminModule改成lazy loading，從PageModule中移除
     SharedModule
   ],
   providers: [],

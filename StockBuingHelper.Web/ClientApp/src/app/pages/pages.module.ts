@@ -1,7 +1,7 @@
 import { HomeModule } from './home/home.module';
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { AdminModule } from './admin/admin.module';
+//import { AdminModule } from './admin/admin.module';
 
 
 @NgModule({
@@ -9,11 +9,11 @@ import { AdminModule } from './admin/admin.module';
   imports: [
     CommonModule,
     HomeModule,
-    AdminModule
+    //AdminModule //改lazy loading
   ],
   exports:[
     HomeModule,
-    AdminModule
+    //AdminModule //改lazy loading
   ]
 })
 export class PagesModule { }
