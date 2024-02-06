@@ -9,7 +9,7 @@
         public int? volumeTxDateInterval { get; set; } = 7;
         public int? volume { get; set; } = 500;
         public decimal? epsAcc4Q { get; set; } = 0;
-        public double? pe { get; set; } = 25;
+        public double? pe { get; set; } = 20;
         public bool queryEtfs { get; set; } = false;
     }
 }
