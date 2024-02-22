@@ -500,7 +500,13 @@ namespace StockBuyingHelper.Service.Implements
                             var deserializeData = JsonSerializer.Deserialize<EpsInfoModel>(sr);
 
                             var epsAcc4Q = deserializeData.data.data.result.revenues.Count > 0 ? Convert.ToDecimal(deserializeData.data.data.result.revenues[0].epsAcc4Q) : 0M;
-                            var interval = deserializeData.data.data.result.revenues.Count > 0 ? $"{deserializeData.data.data.result.revenues[0].date.AddMonths(-11).ToString("yyyy/MM")} ~ {deserializeData.data.data.result.revenues[0].date.ToString("yyyy/MM")}" : "";
+
+                            var startQuaterMonth = deserializeData.data.data.result.revenues[0].date.AddMonths(-9).ToString("yyyy/MM").Split("/");
+                            var endQuaterMonth = deserializeData.data.data.result.revenues[0].date.ToString("yyyy/MM").Split("/");
+                            var startQuater = $"{startQuaterMonth[0]}Q{Convert.ToInt32(startQuaterMonth[1]) / 3}" ;
+                            var endQuater = $"{endQuaterMonth[0]}Q{Convert.ToInt32(endQuaterMonth[1]) / 3}";
+
+                            var interval = deserializeData.data.data.result.revenues.Count > 0 ? $"{startQuater}~{endQuater}" : "";
 
                             var peInfo = new PeInfoModel() {
                                 StockId = item.StockId, 
