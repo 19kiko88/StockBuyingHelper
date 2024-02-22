@@ -88,7 +88,9 @@ namespace StockBuyingHelper.Service.Implements
 
         /// <summary>
         /// 
-        /// Ref：https://stackoverflow.com/questions/13741879/how-to-add-sqlparameters-in-a-loop
+        /// Ref：
+        /// https://stackoverflow.com/questions/13741879/how-to-add-sqlparameters-in-a-loop
+        /// https://dotblogs.com.tw/wuanunet/2011/10/30/48291
         /// </summary>
         /// <param name="data"></param>
         /// <returns></returns>
