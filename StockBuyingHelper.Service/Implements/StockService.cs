@@ -507,7 +507,7 @@ namespace StockBuyingHelper.Service.Implements
                             var endQuater = $"{endQuaterMonth[0]}Q{Convert.ToInt32(endQuaterMonth[1]) / 3}";
 
                             var interval = deserializeData.data.data.result.revenues.Count > 0 ? $"{startQuater}~{endQuater}" : "";
-
+                    
                             var peInfo = new PeInfoModel() {
                                 StockId = item.StockId, 
                                 StockName = item.StockName, 
