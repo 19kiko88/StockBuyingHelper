@@ -32,7 +32,7 @@
           "configurations": {
             "staging": 
             {
-              "baseHref": "/SBH/",
+              "baseHref": "/SBH_Stg/",
               "budgets": [
                 {
                   "type": "anyComponentStyle",
@@ -47,7 +47,7 @@
               ]
             },
             "production": {
-              "baseHref": "/SBH_Stg/",
+              "baseHref": "/SBH/",
               "budgets": [
                 {
                   "type": "anyComponentStyle",
