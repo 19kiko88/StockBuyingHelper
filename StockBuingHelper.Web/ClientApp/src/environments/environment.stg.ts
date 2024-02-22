@@ -7,7 +7,7 @@ export const environment = {
   production: true,
   //webSite: 'http://localhost:4201',
   //apiBaseUrl: 'https://localhost:7184/api'
-  apiBaseUrl: 'http://128.199.223.62/SBH_Stg/api'
+  apiBaseUrl: 'http://128.199.223.62/SBH/api'
 };
 
 /*

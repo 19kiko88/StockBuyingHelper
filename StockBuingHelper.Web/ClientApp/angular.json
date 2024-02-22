@@ -32,7 +32,7 @@
           "configurations": {
             "staging": 
             {
-              "baseHref": "/SBH_Stg/",
+              "baseHref": "/SBH/",
               "budgets": [
                 {
                   "type": "anyComponentStyle",
