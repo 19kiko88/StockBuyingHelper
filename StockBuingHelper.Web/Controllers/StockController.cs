@@ -17,13 +17,20 @@ namespace StockBuingHelper.Web.Controllers
         private readonly IStockService _stockService;
         private readonly IVolumeService _volumeService;
         private readonly IAdminService _adminService;
+        private readonly IConfiguration _config;
         private static List<StockVolumeInfoModel> lockVolumeObj = new List<StockVolumeInfoModel>();
 
-        public StockController(IStockService stockService, IVolumeService volumeService, IAdminService adminService)
+        public StockController(
+            IStockService stockService, 
+            IVolumeService volumeService, 
+            IAdminService adminService,
+            IConfiguration config
+            )
         {
             _stockService = stockService;
             _volumeService = volumeService;
             _adminService = adminService;
+            _config = config;
         }
 
         [HttpPost]
@@ -114,7 +121,7 @@ namespace StockBuingHelper.Web.Controllers
 
                 #region get EPS & PE
                 //篩選條件4：近四季eps>0, pe<=25。縮小資料範圍
-                var listPe = _stockService.GetFilterPe(volumeFilterData, reqData.epsAcc4Q.Value, reqData.pe.Value).Result;
+                var listPe = _stockService.GetFilterPe(volumeFilterData, reqData.epsAcc4Q.Value, reqData.pe.Value, _config.GetValue<string>("OperationSystem")).Result;
                 var peIds = listPe.Select(cc => cc.StockId);
                 var peFilterData = listStockInfo.Where(c => peIds.Contains(c.StockId)).ToList();
                 yahooApiRequestCount += volumeFilterData.Count;

@@ -469,7 +469,7 @@ namespace StockBuyingHelper.Service.Implements
         /// <param name="data">資料來源</param>
         /// <param name="taskCount">多執行緒的Task數量</param>
         /// <returns></returns>
-        public async Task<List<PeInfoModel>> GetPE(List<StockInfoModel> data, int taskCount = 25)
+        public async Task<List<PeInfoModel>> GetPE(List<StockInfoModel> data, int taskCount = 25, string Os = "Windows")
         {
             var res = new List<PeInfoModel>();
             var httpClient = new HttpClient();
@@ -501,10 +501,22 @@ namespace StockBuyingHelper.Service.Implements
 
                             var epsAcc4Q = deserializeData.data.data.result.revenues.Count > 0 ? Convert.ToDecimal(deserializeData.data.data.result.revenues[0].epsAcc4Q) : 0M;
 
-                            var startQuaterMonth = deserializeData.data.data.result.revenues[0].date.AddMonths(-9).ToString("yyyy/MM").Split("/");
-                            var endQuaterMonth = deserializeData.data.data.result.revenues[0].date.ToString("yyyy/MM").Split("/");
-                            var startQuater = $"{startQuaterMonth[0]}Q{Convert.ToInt32(startQuaterMonth[1]) / 3}" ;
-                            var endQuater = $"{endQuaterMonth[0]}Q{Convert.ToInt32(endQuaterMonth[1]) / 3}";
+                            var d = DateOnly.FromDateTime(deserializeData.data.data.result.revenues[0].date);
+                            var startQuater = $"{d.AddMonths(-9).Year}Q{ Convert.ToInt32(d.AddMonths(-9).Month)/3 }";
+                            var endQuater = $"{d.Year}Q{Convert.ToInt32(d.Month) / 3}";
+                            
+                            if (Os == "Linux")
+                            {
+                                /*
+                                 * Linux的日期會自動減一天，所以要AddDays(1)回去
+                                 * ex：
+                                 * api return date：2023-12-01T00:00:00+08:00
+                                    deserializeData.data.data.result.revenues[0].date.AddMonths(-9); => 02/28/2023 16:00:00
+                                    deserializeData.data.data.result.revenues[0].date; => 11/30/2023 16:00:00
+                                 */
+                                startQuater = $"{d.AddMonths(-9).AddDays(1).Year}Q{Convert.ToInt32(d.AddMonths(-9).AddDays(1).Month) / 3}";
+                                endQuater = $"{d.AddDays(1).Year}Q{Convert.ToInt32(d.AddDays(1).Month) / 3}";
+                            }
 
                             var interval = deserializeData.data.data.result.revenues.Count > 0 ? $"{startQuater}~{endQuater}" : "";
                     
@@ -537,9 +549,9 @@ namespace StockBuyingHelper.Service.Implements
         /// <param name="pe">近四季PE篩選條件</param>
         /// <param name="taskCount">多執行緒的Task數量</param>
         /// <returns></returns>
-        public async Task<List<PeInfoModel>> GetFilterPe(List<StockInfoModel> data, decimal eps = 0, double pe = 25, int taskCount = 25)
+        public async Task<List<PeInfoModel>> GetFilterPe(List<StockInfoModel> data, decimal eps = 0, double pe = 25, string Os = "Windows", int taskCount = 25)
         {
-            var res = await GetPE(data, taskCount);
+            var res = await GetPE(data, taskCount, Os);
 
             if (!IgnoreFilter)
             {
