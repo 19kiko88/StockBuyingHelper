@@ -499,23 +499,27 @@ namespace StockBuyingHelper.Service.Implements
                              */
                             var deserializeData = JsonSerializer.Deserialize<EpsInfoModel>(sr);
 
+                            var startQuater = string.Empty;
+                            var endQuater = string.Empty;
                             var epsAcc4Q = deserializeData.data.data.result.revenues.Count > 0 ? Convert.ToDecimal(deserializeData.data.data.result.revenues[0].epsAcc4Q) : 0M;
-
-                            var d = DateOnly.FromDateTime(deserializeData.data.data.result.revenues[0].date);
-                            var startQuater = $"{d.AddMonths(-9).Year}Q{ Convert.ToInt32(d.AddMonths(-9).Month)/3 }";
-                            var endQuater = $"{d.Year}Q{Convert.ToInt32(d.Month) / 3}";
-                            
-                            if (Os == "Linux")
+                            if (epsAcc4Q > 0)
                             {
-                                /*
-                                 * Linux的日期會自動減一天，所以要AddDays(1)回去
-                                 * ex：
-                                 * api return date：2023-12-01T00:00:00+08:00
-                                    deserializeData.data.data.result.revenues[0].date.AddMonths(-9); => 02/28/2023 16:00:00
-                                    deserializeData.data.data.result.revenues[0].date; => 11/30/2023 16:00:00
-                                 */
-                                startQuater = $"{d.AddMonths(-9).AddDays(1).Year}Q{Convert.ToInt32(d.AddMonths(-9).AddDays(1).Month) / 3}";
-                                endQuater = $"{d.AddDays(1).Year}Q{Convert.ToInt32(d.AddDays(1).Month) / 3}";
+                                var d = DateOnly.FromDateTime(deserializeData.data.data.result.revenues[0].date);
+                                startQuater = $"{d.AddMonths(-9).Year}Q{Convert.ToInt32(d.AddMonths(-9).Month) / 3}";
+                                endQuater = $"{d.Year}Q{Convert.ToInt32(d.Month) / 3}";
+
+                                if (Os == "Linux")
+                                {
+                                    /*
+                                     * Linux的日期會自動減一天，所以要AddDays(1)回去
+                                     * ex：
+                                     * api return date：2023-12-01T00:00:00+08:00
+                                        deserializeData.data.data.result.revenues[0].date.AddMonths(-9); => 02/28/2023 16:00:00
+                                        deserializeData.data.data.result.revenues[0].date; => 11/30/2023 16:00:00
+                                     */
+                                    startQuater = $"{d.AddMonths(-9).AddDays(1).Year}Q{Convert.ToInt32(d.AddMonths(-9).AddDays(1).Month) / 3}";
+                                    endQuater = $"{d.AddDays(1).Year}Q{Convert.ToInt32(d.AddDays(1).Month) / 3}";
+                                }
                             }
 
                             var interval = deserializeData.data.data.result.revenues.Count > 0 ? $"{startQuater}~{endQuater}" : "";
