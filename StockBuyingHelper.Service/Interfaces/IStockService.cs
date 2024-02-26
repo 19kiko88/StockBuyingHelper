@@ -102,7 +102,7 @@ namespace StockBuyingHelper.Service.Interfaces
         /// <param name="data">資料來源</param>
         /// <param name="taskCount">多執行緒的Task數量</param>
         /// <returns></returns>
-        public Task<List<PeInfoModel>> GetPE(List<StockInfoModel> data, int taskCount = 25);
+        public Task<List<PeInfoModel>> GetPE(List<StockInfoModel> data, int taskCount = 25, string Os = "Windows");
 
         /// <summary>
         /// 篩選本益比(PE) & 近四季EPS
@@ -112,7 +112,7 @@ namespace StockBuyingHelper.Service.Interfaces
         /// <param name="pe">近四季PE篩選條件</param>
         /// <param name="taskCount">多執行緒的Task數量</param>
         /// <returns></returns>
-        public Task<List<PeInfoModel>> GetFilterPe(List<StockInfoModel> data, decimal eps = 0, double pe = 25, int taskCount = 25);
+        public Task<List<PeInfoModel>> GetFilterPe(List<StockInfoModel> data, decimal eps = 0, double pe = 25, string Os = "Windows", int taskCount = 25);
 
         /// <summary>
         /// 取得每月MoM. YoY增減趴數
