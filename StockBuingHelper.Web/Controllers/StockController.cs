@@ -18,19 +18,21 @@ namespace StockBuingHelper.Web.Controllers
         private readonly IVolumeService _volumeService;
         private readonly IAdminService _adminService;
         private readonly IConfiguration _config;
-        private static List<StockVolumeInfoModel> lockVolumeObj = new List<StockVolumeInfoModel>();
+        private readonly ILogger<StockController> _logger;
 
         public StockController(
             IStockService stockService, 
             IVolumeService volumeService, 
             IAdminService adminService,
-            IConfiguration config
+            IConfiguration config,
+            ILogger<StockController> logger
             )
         {
             _stockService = stockService;
             _volumeService = volumeService;
             _adminService = adminService;
             _config = config;
+            _logger = logger;
         }
 
         [HttpPost]
@@ -39,7 +41,6 @@ namespace StockBuingHelper.Web.Controllers
             var sw = new Stopwatch();
             var res = new Result<List<BuyingResultDto>>();
             var yahooApiRequestCount = 0;
-            var runLog = new StringBuilder();
 
             try
             {
@@ -71,6 +72,7 @@ namespace StockBuingHelper.Web.Controllers
                     res.Message = validateMsg;
                     return res;
                 }
+                _logger.LogInformation("validateMsg OK.");
 
                 var filterIds = new List<string>();
                 if (!string.IsNullOrEmpty(reqData.specificStockId))
@@ -89,10 +91,8 @@ namespace StockBuingHelper.Web.Controllers
 
                 //篩選條件1：股價0~200
                 var listStockInfo = await _stockService.GteStockInfo(filterIds, reqData.queryEtfs, reqData.priceLow.Value, reqData.priceHigh.Value);
-                runLog.Append("GteStockInfo done。");
-
                 var list52HighLow = await _stockService.GetHighLowIn52Weeks(listStockInfo);
-                runLog.Append("GetHighLowIn52Weeks done。");
+                _logger.LogInformation("GetHighLowIn52Weeks OK.");                
 
                 //篩選條件2：vti(reqData.vtiIndex) > 800
                 /*
@@ -103,7 +103,7 @@ namespace StockBuingHelper.Web.Controllers
                  */
                 var listVti = _stockService.GetFilterVTI(list52HighLow, reqData.vtiIndex).Result;
                 var vtiFilterIds = listVti.Select(c => c.StockId).ToList();
-                runLog.Append("GetFilterVTI done。");
+                _logger.LogInformation("GetFilterVTI OK.");
 
                 #region Yahoo API(要減少Request次數，變免被block)
 
@@ -116,7 +116,7 @@ namespace StockBuingHelper.Web.Controllers
                 var volumeIds = listVolume.Select(cc => cc.StockId);
                 var volumeFilterData = listStockInfo.Where(c => volumeIds.Contains(c.StockId)).ToList();
                 yahooApiRequestCount += volumeNotInDb.Count;
-                runLog.Append("GetFilterVolume done。");
+                _logger.LogInformation("GetFilterVolume OK.");
                 #endregion
 
                 #region get EPS & PE
@@ -125,14 +125,14 @@ namespace StockBuingHelper.Web.Controllers
                 var peIds = listPe.Select(cc => cc.StockId);
                 var peFilterData = listStockInfo.Where(c => peIds.Contains(c.StockId)).ToList();
                 yahooApiRequestCount += volumeFilterData.Count;
-                runLog.Append("GetFilterPe done。");
+                _logger.LogInformation("GetFilterPe OK.");
                 #endregion
 
                 #region get Revenue
                 //篩選條件5：近6個月的月營收YoY只少要有3個月為正成長 && 最新的YoY必須要大於0
                 var listRevenue = await _stockService.GetFilterRevenue(peFilterData, 6);
                 yahooApiRequestCount += peFilterData.Count;
-                runLog.Append("GetFilterRevenue done。");
+                _logger.LogInformation("GetFilterRevenue OK.");
                 #endregion
 
                 #endregion
@@ -175,13 +175,14 @@ namespace StockBuingHelper.Web.Controllers
             }
             catch (Exception ex)
             {
+                _logger.LogDebug(ex.Message);
                 res.Message = ex.ToString();
                 sw.Stop();
                 return res;
             }
 
             sw.Stop();
-            res.Message += $"Run time：{Math.Round(Convert.ToDouble(sw.ElapsedMilliseconds / 1000), 2)}(s)。YahooApiReqestCount：{yahooApiRequestCount}。{runLog}";
+            res.Message += $"Run time：{Math.Round(Convert.ToDouble(sw.ElapsedMilliseconds / 1000), 2)}(s)。YahooApiReqestCount：{yahooApiRequestCount}。";
             res.Success = true;
 
             return res;
