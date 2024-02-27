@@ -1,11 +1,17 @@
 using Microsoft.AspNetCore.HttpOverrides;
+using Serilog;
 using StockBuyingHelper.Models;
 using StockBuyingHelper.Service.Implements;
 using StockBuyingHelper.Service.Interfaces;
-using ElmahCore.Mvc;
-using ElmahCore;
 
 var builder = WebApplication.CreateBuilder(args);
+var logger = new LoggerConfiguration()
+    .ReadFrom.Configuration(builder.Configuration)
+    .Enrich.FromLogContext()
+    .CreateLogger();
+
+builder.Logging.ClearProviders();
+builder.Logging.AddSerilog(logger);
 
 // Add services to the container.
 
@@ -37,9 +43,6 @@ if (builder.Environment.IsDevelopment())
     });
 }
 
-//Ref¡Ghttps://github.com/ElmahCore/ElmahCore
-builder.Services.AddElmah();
-
 
 var app = builder.Build();
 
@@ -61,7 +64,6 @@ if (app.Environment.IsDevelopment())
 
 app.MapControllers();
 app.UseSpaStaticFiles();
-app.UseElmah();
 
 /*
  *UseSpa() returns index.html from API instead of 404
