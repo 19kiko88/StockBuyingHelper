@@ -52,11 +52,6 @@ namespace StockBuingHelper.Web.Controllers
                     validateMsg += "價格區間錯誤.";
                 }
 
-                //if (reqData.vtiIndex < 700)
-                //{
-                //    validateMsg += "vti至少大(等)於700.";
-                //}
-
                 if (!(reqData.volumeTxDateInterval >= 3 && reqData.volumeTxDateInterval <= 10))
                 {
                     validateMsg += "平均成交量交易日區間必須介於3~10.";
@@ -89,9 +84,15 @@ namespace StockBuingHelper.Web.Controllers
                     }
                 }
 
+                /*
+                 * 選股條件ref：
+                 * https://www.ptt.cc/bbs/Stock/M.1680899841.A.5F6.html
+                 * https://www.ptt.cc/bbs/Stock/M.1468072684.A.DD1.html
+                 * https://www.finlab.tw/%E4%B8%89%E7%A8%AE%E6%9C%88%E7%87%9F%E6%94%B6%E9%80%B2%E9%9A%8E%E7%9C%8B%E6%B3%95/
+                 */
                 //篩選條件1：股價0~200
-                var listStockInfo = await _stockService.GteStockInfo(filterIds, reqData.queryEtfs, reqData.priceLow.Value, reqData.priceHigh.Value);
-                var list52HighLow = await _stockService.GetHighLowIn52Weeks(listStockInfo);
+                var listStockInfo = _stockService.GteStockInfo(filterIds, reqData.queryEtfs, reqData.priceLow.Value, reqData.priceHigh.Value).Result;
+                var list52HighLow = _stockService.GetHighLowIn52Weeks(listStockInfo).Result;
                 _logger.LogInformation("GetHighLowIn52Weeks OK.");                
 
                 //篩選條件2：vti(reqData.vtiIndex) > 800
@@ -129,7 +130,7 @@ namespace StockBuingHelper.Web.Controllers
                 #endregion
 
                 #region get Revenue
-                //篩選條件5：近6個月的月營收YoY只少要有3個月為正成長 && 最新的YoY必須要大於0
+                //篩選條件5：近3個月的月營收YoY必須為正成長 && 最新的YoY必須要大於0
                 var listRevenue = await _stockService.GetFilterRevenue(peFilterData, 6);
                 yahooApiRequestCount += peFilterData.Count;
                 _logger.LogInformation("GetFilterRevenue OK.");
@@ -161,7 +162,7 @@ namespace StockBuingHelper.Web.Controllers
                          cfiCode = stockInfo.CFICode
                      }
                     )
-                    .OrderByDescending(o => o.cfiCode).ThenByDescending(o => o.amount)
+                    .OrderByDescending(o => o.cfiCode).ThenByDescending(o => o.eps).ThenByDescending(o => o.amount)
                     .ToList();
 
                 var idx = 0;
