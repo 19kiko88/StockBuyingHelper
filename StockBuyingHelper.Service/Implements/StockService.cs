@@ -645,7 +645,7 @@ namespace StockBuyingHelper.Service.Implements
                 res = (from a in res
                        join b in data on a.StockId equals b.StockId
                        where
-                         (b.CFICode == StockType.ESVUFR && (a.RevenueData.Where(c => c.monthYOY > 0).Count() >= 3 && a.RevenueData[0].yoy > 0))
+                         (b.CFICode == StockType.ESVUFR && (!a.RevenueData.Take(3).Where(c => c.monthYOY < 0).Any() && a.RevenueData[0].yoy > 0))
                          ||
                          StockType.ETFs.Contains(b.CFICode)
                        orderby b.CFICode descending
@@ -691,41 +691,9 @@ namespace StockBuyingHelper.Service.Implements
                      Amount = b.Amount
                  }).AsEnumerable();
 
-            if (string.IsNullOrEmpty(specificStockId))
-            {
-                data = data.Where(c =>
-                    //c.VolumeDatas.Take(3).Where(c => c.volumeK > 500).Any() &&
-                     (c.Type == StockType.ESVUFR
-                        && (
-                                    //c.EPS > 0 && c.PE < 25
-                                    //&& (
-                                    //(c.RevenueDatas[0].MOM > 0 || c.RevenueDatas[1].MOM > 0 || c.RevenueDatas[2].MOM > 0) 
-                                    c.RevenueDatas.Where(c => c.monthYOY > 0).Count() >= 3
-                                    &&
-                                    (
-                                        c.RevenueDatas[0].yoy > 0 //|| 
-                                                                  //(c.RevenueDatas[0].YOY > 0 && (c.RevenueDatas[0].YOY > c.RevenueDatas[1].YOY && c.RevenueDatas[1].YOY > c.RevenueDatas[2].YOY))
-                                    )
-                                //)
-                            )
-                        )
-                        || StockType.ETFs.Contains(c.Type)//ETF不管營收
-                 ).AsEnumerable();
-            }
-
             var res = data
                  .OrderByDescending(o => o.Type).ThenByDescending(o => o.EPS)
                  .ToList();
-
-            /*
-             * 選股條件：
-             * https://www.ptt.cc/bbs/Stock/M.1680899841.A.5F6.html
-             * https://www.ptt.cc/bbs/Stock/M.1468072684.A.DD1.html
-             * 1.長期(1年)：VTI大於800 
-             * 2.長期(近四季)：EPS > 0 && PE < 25
-             * 3.中長期(近一季)：MoM至少有兩個月為正 || (最新(YoY)當月累計營收要比去年累計營收高 || YoY逐步轉正)
-             * 4.短期：近3個交易日，有成交量超過500的紀錄
-             */
 
             return res.ToList();
         }
