@@ -10,30 +10,65 @@
   
         <div class="container">
             <form class="row g-3" [formGroup]="form" (ngSubmit)="submit()">
-              <div class="col-12 col-md-6">
-                <label for="inputAddress2" class="form-label">個股查詢</label>
-                <input formControlName="specificStockId" type="text" class="form-control" placeholder="股票代碼">
-              </div>              
+            
 
+              <div class="col-12 col-md-12">
+                <label for="inputAddress2" class="form-label">查詢類別</label>
+
+                <br/>
+
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input" type="radio" name="inlineRadioOptions" value="default" [checked]="true" (change)="changeQueryType($event)">
+                  <label class="form-check-label" for="inlineRadio1">預設</label>
+                </div>
+
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input" type="radio" name="inlineRadioOptions" value="manual" (change)="changeQueryType($event)">
+                  <label class="form-check-label" for="inlineRadio1">自行輸入</label>
+                </div>
+
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input" type="radio" name="inlineRadioOptions" value="0050" (change)="changeQueryType($event)">
+                  <label class="form-check-label" for="inlineRadio2">0050</label>
+                </div>
+                <!-- {{queryType}} -->
+              </div>              
+              
+<!-- 
               <div class="col-12">
                   <label for="customRange3" class="form-label">VTI指數({{vtiRange}})</label>
                   <input formControlName="vtiRange" [(ngModel)]="vtiRange" type="range" class="form-range" min="500" max="1000" step="10">
-              </div>
+              </div> -->
 
-              <div class="col-12">
-                <div class="form-check">
-                  <input formControlName="etfDisplay" class="form-check-input" type="checkbox">
-                  <label class="form-check-label" for="gridCheck">
-                    顯示ETF資料
-                  </label>
+              <ng-container *ngIf="queryType == 'default'">
+                <div class="col-12">
+                  <!-- <h5>Range: {{rangeValues[0] + ' - ' + rangeValues[1]}}</h5> -->
+                  <label for="customRange3" class="form-label">VTI指數({{vtiRange[0] + ' - ' + vtiRange[1]}})</label>
+                  <p-slider formControlName="vtiRanges" [(ngModel)]="vtiRange" [min]=60 [max]=100 [range]="true"></p-slider>
                 </div>
-              </div>
+  
+                <div class="col-12">
+                  <div class="form-check">
+                    <input formControlName="etfDisplay" class="form-check-input" type="checkbox">
+                    <label class="form-check-label" for="gridCheck">
+                      顯示ETF資料
+                    </label>
+                  </div>
+                </div>
+              </ng-container>
+
+              <ng-container *ngIf="queryType == 'manual'">
+                <div class="col-12 col-md-6">
+                  <label for="inputAddress2" class="form-label">個股查詢</label>
+                  <input formControlName="specificStockId" type="text" class="form-control" placeholder="股票代碼">
+                </div>  
+              </ng-container>
 
               <div class="col-12">
                 <button type="submit" class="btn btn-primary">送出查詢</button>
               </div>
               
-              </form>            
+              </form>   
           </div>
         
       </div>
@@ -57,6 +92,7 @@
                 <th pSortableColumn="epsInterval">EPS區間 <p-sortIcon field="epsInterval"></p-sortIcon></th>
                 <th pSortableColumn="eps">(近四季)EPS <p-sortIcon field="eps"></p-sortIcon></th>
                 <th pSortableColumn="pe">PE <p-sortIcon field="pe"></p-sortIcon></th>
+                <th pSortableColumn="vti">VTI <p-sortIcon field="vti"></p-sortIcon></th>
                 <th pSortableColumn="amount">購買數 <p-sortIcon field="amount"></p-sortIcon></th>
               </tr>
         </ng-template>
@@ -74,6 +110,7 @@
                 <td>{{ vtiData.epsInterval }}</td>
                 <td>{{ vtiData.eps }}</td>
                 <td>{{ vtiData.pe }}</td>
+                <td>{{ vtiData.vti }}</td>
                 <td>{{ vtiData.amount }}</td>
             </tr>
         </ng-template>
