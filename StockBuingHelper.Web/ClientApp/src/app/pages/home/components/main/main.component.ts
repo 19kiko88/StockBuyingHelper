@@ -14,9 +14,11 @@ import { ResGetVtiDto } from 'src/app/core/dtos/response/res-get-vti-dto';
 
 export class MainComponent implements OnInit 
 {
-  vtiRange: number = 800;
+  //vtiRange: number = 800;
   form!:FormGroup;
   vtiRes:ResGetVtiDto[] = [];
+  vtiRange: number[] = [80, 100];
+  queryType:string = 'default';
 
   constructor(
     private _formBuilder: FormBuilder,
@@ -27,9 +29,19 @@ export class MainComponent implements OnInit
   ngOnInit(): void {
     this.form = this._formBuilder.group({
       specificStockId: [''],
-      vtiRange: [this.vtiRange],
-      etfDisplay : [false],
+      vtiRanges: [],
+      etfDisplay : false
     })
+  }
+
+  changeQueryType(event: any)
+  {
+    this.queryType = event.target.value;
+
+    //恢復default值
+    this.vtiRange = [80,100];
+    this.form.controls['etfDisplay'].setValue(false);
+    this.form.controls['specificStockId'].setValue('');
   }
 
   submit():void
@@ -37,6 +49,7 @@ export class MainComponent implements OnInit
     this._loadingService.setLoading(true, 'Searching...');
 
     let data: ReqGetVtiDto = {
+      queryType: this.queryType,
       specificStockId: this.form.controls['specificStockId'].value,
       vtiIndex : this.vtiRange,
       queryEtfs: this.form.controls['etfDisplay'].value

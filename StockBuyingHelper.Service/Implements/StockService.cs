@@ -1,8 +1,13 @@
 ﻿using System.Data;
-using System.Data.SqlClient;
+using System.IO.Compression;
+using System.Net;
+using System.Net.Http;
+using System.Reflection.PortableExecutable;
+using System.Security.Authentication;
 using System.Text;
 using System.Text.Json;
 using AngleSharp;
+using AngleSharp.Io;
 using StockBuyingHelper.Service.Interfaces;
 using StockBuyingHelper.Service.Models;
 using StockBuyingHelper.Service.Utility;
@@ -304,11 +309,11 @@ namespace StockBuyingHelper.Service.Implements
 
             foreach (var item in highLowData)
             {
-                var diffHigh = (item.HighPriceInCurrentYear - item.LowPriceInCurrentYear) == 0M ? 0.01M : (item.HighPriceInCurrentYear - item.LowPriceInCurrentYear);
                 /*
                  *Ref：https://www.facebook.com/1045010642367425/posts/1076024329266056/
                  *在近52周最高最低價格區間內，目前價格離最高價還有多少百分比(vti越高，表示離52周區間內最高點越近)
                  */
+                var diffHigh = (item.HighPriceInCurrentYear - item.LowPriceInCurrentYear) == 0M ? 0.01M : (item.HighPriceInCurrentYear - item.LowPriceInCurrentYear);
                 var vti = Convert.ToDouble(Math.Round(1 - (item.Price - item.LowPriceInCurrentYear) / diffHigh, 2));
                 var amount = Convert.ToInt32(Math.Round(vti, 2) * 1000);
 
@@ -331,13 +336,16 @@ namespace StockBuyingHelper.Service.Implements
         /// <param name="highLowData">取得52周間最高 & 最低價資料(非最終成交價)</param>
         /// <param name="amountLimit">vti轉換後的購買股數</param>
         /// <returns></returns>
-        public async Task<List<StockVtiInfoModel>> GetFilterVTI(List<StockHighLowIn52WeeksInfoModel> highLowData, int amountLimit = 700)
+        public async Task<List<StockVtiInfoModel>> GetFilterVTI(List<StockHighLowIn52WeeksInfoModel> highLowData, int[] vtiRange)
         {
             var res = await GetVTI(highLowData);
 
+            var sRange = vtiRange[0] * 0.01;
+            var eRange = vtiRange[1] *0.01;
+
             if (IgnoreFilter == false)
             {
-                res = res.Where(c => c.Amount >= amountLimit).ToList();
+                res = res.Where(c => c.VTI >= sRange && c.VTI <= eRange).ToList();
             }
 
             return res;
@@ -353,8 +361,6 @@ namespace StockBuyingHelper.Service.Implements
         public async Task<List<StockVolumeInfoModel>> GetVolume(List<string> vtiDataIds, int txDateCount = 10, int taskCount = 25)
         {
             var res = new List<StockVolumeInfoModel>();
-            var httpClient = new HttpClient();
-
             //分群組 for 多執行緒分批執行
             var groups = TaskUtils.GroupSplit(vtiDataIds, taskCount);
             var tasks = new Task[groups.Count];
@@ -366,6 +372,7 @@ namespace StockBuyingHelper.Service.Implements
                 {
                     foreach (var strockId in idGroups)
                     {
+                        var httpClient = new HttpClient();
                         var url = $"https://tw.stock.yahoo.com/_td-stock/api/resource/StockServices.tradesWithQuoteStats;limit=210;period=day;symbol={strockId}.TW?bkt=&device=desktop&ecma=modern&feature=enableGAMAds%2CenableGAMEdgeToEdge%2CenableEvPlayer&intl=tw&lang=zh-Hant-TW&partner=none&prid=5m2req5ioan5s&region=TW&site=finance&tz=Asia%2FTaipei&ver=1.2.2112&returnMeta=true";
                         var resMessage = await httpClient.GetAsync(url);
 
@@ -472,7 +479,6 @@ namespace StockBuyingHelper.Service.Implements
         public async Task<List<PeInfoModel>> GetPE(List<StockInfoModel> data, int taskCount = 25, string Os = "Windows")
         {
             var res = new List<PeInfoModel>();
-            var httpClient = new HttpClient();
 
             //分群組 for 多執行緒分批執行
             var groups = TaskUtils.GroupSplit(data, taskCount);
@@ -485,6 +491,7 @@ namespace StockBuyingHelper.Service.Implements
                 {
                     foreach (var item in vtiData)
                     {
+                        var httpClient = new HttpClient();
                         var url = @$"https://tw.stock.yahoo.com/_td-stock/api/resource/StockServices.revenues;includedFields=priceAssessment;period=quarterSum4;priceAssessmentPeriod=quarter;symbol={item.StockId}.TW?bkt=&device=desktop&ecma=modern&feature=enableGAMAds%2CenableGAMEdgeToEdge%2CenableEvPlayer&intl=tw&lang=zh-Hant-TW&partner=none&prid=7ojmd05invvv9&region=TW&site=finance&tz=Asia%2FTaipei&ver=1.2.2103&returnMeta=true";
                         var resMessage = await httpClient.GetAsync(url);
 
@@ -579,52 +586,36 @@ namespace StockBuyingHelper.Service.Implements
         public async Task<List<RevenueInfoModel>> GetRevenue(List<StockInfoModel> data, int revenueMonthCount = 3, int taskCount = 25)
         {
             var res = new List<RevenueInfoModel>();
+            var config = Configuration.Default;
+            var context = BrowsingContext.New(config);
             var httpClient = new HttpClient();
 
-            //分群組 for 多執行緒分批執行
-            var groups = TaskUtils.GroupSplit(data, taskCount);
-            var tasks = new Task[groups.Count];
-
-            for (int i = 0; i < groups.Count; i++)
+            foreach (var item in data)
             {
-                var vtiData = groups[i];
-                tasks[i] = Task.Run(async () =>
+                var url = $"https://tw.stock.yahoo.com/quote/{item.StockId}.TW/revenue"; //營收
+                var resMessage = await httpClient.GetAsync(url);
+
+                //檢查回應的伺服器狀態StatusCode是否是200 OK
+                if (resMessage.StatusCode == System.Net.HttpStatusCode.OK)
                 {
-                    foreach (var item in vtiData)
+                    var sr = await resMessage.Content.ReadAsStringAsync();
+                    var document = await context.OpenAsync(res => res.Content(sr));
+
+                    var listTR = document.QuerySelectorAll("#qsp-revenue-table .table-body-wrapper ul li[class*='List']").Take(revenueMonthCount);
+                    var revenueInfo = new RevenueInfoModel() { StockId = item.StockId, StockName = item.StockName, RevenueData = new List<RevenueData>() };
+                    foreach (var tr in listTR)
                     {
-                        var url = $"https://tw.stock.yahoo.com/quote/{item.StockId}.TW/revenue"; //營收
-                        var resMessage = await httpClient.GetAsync(url);
-
-                        //檢查回應的伺服器狀態StatusCode是否是200 OK
-                        if (resMessage.StatusCode == System.Net.HttpStatusCode.OK)
+                        revenueInfo.RevenueData.Add(new RevenueData()
                         {
-                            var sr = await resMessage.Content.ReadAsStringAsync();
-                            var config = Configuration.Default;
-                            var context = BrowsingContext.New(config);
-                            var document = await context.OpenAsync(res => res.Content(sr));
-
-                            var listTR = document.QuerySelectorAll("#qsp-revenue-table .table-body-wrapper ul li[class*='List']").Take(revenueMonthCount);
-                            var revenueInfo = new RevenueInfoModel() { StockId = item.StockId, StockName = item.StockName, RevenueData = new List<RevenueData>() };
-                            foreach (var tr in listTR)
-                            {
-                                revenueInfo.RevenueData.Add(new RevenueData()
-                                {
-                                    revenueInterval = tr.QuerySelector("div").Children[0].TextContent,//YYYY/MM
-                                    mom = Convert.ToDouble(tr.QuerySelectorAll("span")[1].TextContent.Replace("%", "")),//MOM 
-                                    monthYOY = Convert.ToDouble(tr.QuerySelectorAll("span")[3].TextContent.Replace("%", "")),//月營收年增率
-                                    yoy = Convert.ToDouble(tr.QuerySelectorAll("span")[6].TextContent.Replace("%", ""))//YOY
-                                });
-                            }
-
-                            lock (_lock) 
-                            {
-                                res.Add(revenueInfo);
-                            }                            
-                        }
+                            revenueInterval = tr.QuerySelector("div").Children[0].TextContent,//YYYY/MM
+                            mom = Convert.ToDouble(tr.QuerySelectorAll("span")[1].TextContent.Replace("%", "")),//MOM 
+                            monthYOY = Convert.ToDouble(tr.QuerySelectorAll("span")[3].TextContent.Replace("%", "")),//月營收年增率
+                            yoy = Convert.ToDouble(tr.QuerySelectorAll("span")[6].TextContent.Replace("%", ""))//YOY
+                        });
                     }
-                });
+                    res.Add(revenueInfo);
+                }
             }
-            Task.WaitAll(tasks);
 
             return res;
         }

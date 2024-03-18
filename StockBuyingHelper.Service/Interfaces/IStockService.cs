@@ -74,7 +74,7 @@ namespace StockBuyingHelper.Service.Interfaces
         /// <param name="highLowData">取得52周間最高 & 最低價資料(非最終成交價)</param>
         /// <param name="amountLimit">vti轉換後的購買股數</param>
         /// <returns></returns>
-        public Task<List<StockVtiInfoModel>> GetFilterVTI(List<StockHighLowIn52WeeksInfoModel> highLowData, int amountLimit = 0);
+        public Task<List<StockVtiInfoModel>> GetFilterVTI(List<StockHighLowIn52WeeksInfoModel> highLowData, int[] vtiRange);
 
         /// <summary>
         /// 每日成交量資訊

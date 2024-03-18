@@ -47,10 +47,6 @@ namespace StockBuingHelper.Web.Controllers
                 sw.Start();
 
                 string validateMsg = string.Empty;
-                if (reqData.priceHigh < reqData.priceLow)
-                {
-                    validateMsg += "價格區間錯誤.";
-                }
 
                 if (!(reqData.volumeTxDateInterval >= 3 && reqData.volumeTxDateInterval <= 10))
                 {
@@ -70,19 +66,26 @@ namespace StockBuingHelper.Web.Controllers
                 _logger.LogInformation("validateMsg OK.");
 
                 var filterIds = new List<string>();
-                if (!string.IsNullOrEmpty(reqData.specificStockId))
+                if (reqData.queryType == "0050")
                 {
+                    _stockService.IgnoreFilter = true;
+                    filterIds = _config.GetSection("0050List").Get<List<string>>();
+                }
+                else if (!string.IsNullOrEmpty(reqData.specificStockId))
+                {
+                    _stockService.IgnoreFilter = true;
                     if (reqData.specificStockId.IndexOf(',') > 0)
                     {
                         filterIds = reqData.specificStockId.Split(',').ToList();
-                        _stockService.IgnoreFilter = true;
                     }
                     else
                     {
                         filterIds = new List<string> { reqData.specificStockId };
-                        _stockService.IgnoreFilter = true;
                     }
                 }
+                    
+
+
 
                 /*
                  * 選股條件ref：
@@ -91,18 +94,12 @@ namespace StockBuingHelper.Web.Controllers
                  * https://www.finlab.tw/%E4%B8%89%E7%A8%AE%E6%9C%88%E7%87%9F%E6%94%B6%E9%80%B2%E9%9A%8E%E7%9C%8B%E6%B3%95/
                  */
                 //篩選條件1：股價0~200
-                var listStockInfo = _stockService.GteStockInfo(filterIds, reqData.queryEtfs, reqData.priceLow.Value, reqData.priceHigh.Value).Result;
-                var list52HighLow = _stockService.GetHighLowIn52Weeks(listStockInfo).Result;
+                var listStockInfo = await _stockService.GteStockInfo(filterIds, reqData.queryEtfs, reqData.priceLow.Value, reqData.priceHigh.Value);
+                var list52HighLow = await _stockService.GetHighLowIn52Weeks(listStockInfo);
                 _logger.LogInformation("GetHighLowIn52Weeks OK.");                
 
                 //篩選條件2：vti(reqData.vtiIndex) > 800
-                /*
-                 * 改用Result取代await，block執行緒。避免非同步先執行
-                 * ref：
-                 * https://www.huanlintalk.com/2016/01/async-and-await.html
-                 * https://www.52x7.com/index.php/2022/08/19/csharp-async-await-exec-sequence/
-                 */
-                var listVti = _stockService.GetFilterVTI(list52HighLow, reqData.vtiIndex).Result;
+                var listVti = await _stockService.GetFilterVTI(list52HighLow, reqData.vtiIndex);
                 var vtiFilterIds = listVti.Select(c => c.StockId).ToList();
                 _logger.LogInformation("GetFilterVTI OK.");
 
@@ -110,7 +107,7 @@ namespace StockBuingHelper.Web.Controllers
 
                 #region get Volume
                 //篩選條件3：查詢的交易日範圍內，平均成交量大於500
-                var volumeData = _stockService.GetFilterVolume(vtiFilterIds, reqData.volume.Value, reqData.volumeTxDateInterval.Value).Result;
+                var volumeData = await _stockService.GetFilterVolume(vtiFilterIds, reqData.volume.Value, reqData.volumeTxDateInterval.Value);
                 var listVolume = volumeData.Item1;
                 var volumeNotInDb = volumeData.Item2;
                 _volumeService.InsertVolumeDetail(volumeNotInDb);
@@ -122,7 +119,7 @@ namespace StockBuingHelper.Web.Controllers
 
                 #region get EPS & PE
                 //篩選條件4：近四季eps>0, pe<=25。縮小資料範圍
-                var listPe = _stockService.GetFilterPe(volumeFilterData, reqData.epsAcc4Q.Value, reqData.pe.Value, _config.GetValue<string>("OperationSystem")).Result;
+                var listPe = await _stockService.GetFilterPe(volumeFilterData, reqData.epsAcc4Q.Value, reqData.pe.Value, _config.GetValue<string>("OperationSystem"));
                 var peIds = listPe.Select(cc => cc.StockId);
                 var peFilterData = listStockInfo.Where(c => peIds.Contains(c.StockId)).ToList();
                 yahooApiRequestCount += volumeFilterData.Count;
@@ -157,7 +154,7 @@ namespace StockBuingHelper.Web.Controllers
                          pe = pe.PE,
                          revenueDatas = revenue.RevenueData,
                          volumeDatas = volume.VolumeInfo.OrderByDescending(o => o.txDate).ToList(),
-                         vti = vti.VTI,
+                         vti = Math.Round(vti.VTI * 100, 2),
                          amount = vti.Amount,
                          cfiCode = stockInfo.CFICode
                      }
