@@ -586,131 +586,36 @@ namespace StockBuyingHelper.Service.Implements
         public async Task<List<RevenueInfoModel>> GetRevenue(List<StockInfoModel> data, int revenueMonthCount = 3, int taskCount = 25)
         {
             var res = new List<RevenueInfoModel>();
+            var config = Configuration.Default;
+            var context = BrowsingContext.New(config);
+            var httpClient = new HttpClient();
 
-            //分群組 for 多執行緒分批執行
-            var groups = TaskUtils.GroupSplit(data, data.Count);
-            var tasks = new Task[groups.Count];
-
-            for (int i = 0; i < groups.Count; i++)
+            foreach (var item in data)
             {
-                var vtiData = groups[i];
-                tasks[i] = Task.Run(() =>
+                var url = $"https://tw.stock.yahoo.com/quote/{item.StockId}.TW/revenue"; //營收
+                var resMessage = await httpClient.GetAsync(url);
+
+                //檢查回應的伺服器狀態StatusCode是否是200 OK
+                if (resMessage.StatusCode == System.Net.HttpStatusCode.OK)
                 {
-                    foreach (var item in vtiData)
+                    var sr = await resMessage.Content.ReadAsStringAsync();
+                    var document = await context.OpenAsync(res => res.Content(sr));
+
+                    var listTR = document.QuerySelectorAll("#qsp-revenue-table .table-body-wrapper ul li[class*='List']").Take(revenueMonthCount);
+                    var revenueInfo = new RevenueInfoModel() { StockId = item.StockId, StockName = item.StockName, RevenueData = new List<RevenueData>() };
+                    foreach (var tr in listTR)
                     {
-                        //var config = Configuration.Default;
-                        //var context = BrowsingContext.New(config);
-                        //var req = HttpWebRequest.Create($"https://tw.stock.yahoo.com/quote/{item.StockId}.TW/revenue");
-                        ////req.UseDefaultCredentials = true;
-                        //req.Method = "GET";
-                        ////ServicePointManager.SecurityProtocol = SecurityProtocolType.Ssl3;
-
-                        //using (var response = (HttpWebResponse)req.GetResponse())
-                        //{
-                        //    using (var r = new StreamReader(response.GetResponseStream(), Encoding.UTF8))
-                        //    {
-                        //        string sr = r.ReadToEnd();
-                        //        var document = context.OpenAsync(res => res.Content(sr)).Result;
-                        //        var listTR = document.QuerySelectorAll("#qsp-revenue-table .table-body-wrapper ul li[class*='List']").Take(revenueMonthCount);
-                        //        var revenueInfo = new RevenueInfoModel() { StockId = item.StockId, StockName = item.StockName, RevenueData = new List<RevenueData>() };
-                        //        foreach (var tr in listTR)
-                        //        {
-                        //            revenueInfo.RevenueData.Add(new RevenueData()
-                        //            {
-                        //                revenueInterval = tr.QuerySelector("div").Children[0].TextContent,//YYYY/MM
-                        //                mom = Convert.ToDouble(tr.QuerySelectorAll("span")[1].TextContent.Replace("%", "")),//MOM 
-                        //                monthYOY = Convert.ToDouble(tr.QuerySelectorAll("span")[3].TextContent.Replace("%", "")),//月營收年增率
-                        //                yoy = Convert.ToDouble(tr.QuerySelectorAll("span")[6].TextContent.Replace("%", ""))//YOY
-                        //            });
-                        //        }
-
-                        //        lock (_lock)
-                        //        {
-                        //            res.Add(revenueInfo);
-                        //        }
-                        //    }                            
-                        //}
-
-                        //var httpClientHandler = new HttpClientHandler
-                        //{
-                        //    SslProtocols = System.Security.Authentication.SslProtocols.Tls
-                        //};
-                        //var httpClient = new HttpClient(httpClientHandler);// { SslProtocols = System.Security.Authentication.SslProtocols.Tls };
-                        //var config = Configuration.Default;
-                        //var context = BrowsingContext.New(config);
-
-                        //using (HttpRequestMessage reqest = new HttpRequestMessage(System.Net.Http.HttpMethod.Get, $"https://tw.stock.yahoo.com/quote/{item.StockId}.TW/revenue"))
-                        //{
-                        //    var sr = httpClient.Send(reqest).Content.ReadAsStringAsync().Result;
-                        //    var document = context.OpenAsync(res => res.Content(sr)).Result;
-                        //    var listTR = document.QuerySelectorAll("#qsp-revenue-table .table-body-wrapper ul li[class*='List']").Take(revenueMonthCount);
-                        //    var revenueInfo = new RevenueInfoModel() { StockId = item.StockId, StockName = item.StockName, RevenueData = new List<RevenueData>() };
-                        //    foreach (var tr in listTR)
-                        //    {
-                        //        revenueInfo.RevenueData.Add(new RevenueData()
-                        //        {
-                        //            revenueInterval = tr.QuerySelector("div").Children[0].TextContent,//YYYY/MM
-                        //            mom = Convert.ToDouble(tr.QuerySelectorAll("span")[1].TextContent.Replace("%", "")),//MOM 
-                        //            monthYOY = Convert.ToDouble(tr.QuerySelectorAll("span")[3].TextContent.Replace("%", "")),//月營收年增率
-                        //            yoy = Convert.ToDouble(tr.QuerySelectorAll("span")[6].TextContent.Replace("%", ""))//YOY
-                        //        });
-                        //    }
-
-                        //    lock (_lock)
-                        //    {
-                        //        res.Add(revenueInfo);
-                        //    }
-                        //}
-
-                        var httpClient = new HttpClient() { 
-                            BaseAddress = new Uri($"https://tw.stock.yahoo.com/quote/{item.StockId}.TW/revenue")
-                        };
-                                           
-                        var req = new HttpRequestMessage() { Method = System.Net.Http.HttpMethod.Get };
-
-
-                        /*
-                         * .Net Core访问https接口报错：The requested security protocol is not supported
-                         *Ref：https://www.cnblogs.com/Jackie-sky/p/13230541.html
-                         */
-                        //要放在HttpRequestMessage後
-                        ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls | SecurityProtocolType.Tls11 | SecurityProtocolType.Tls12;
-                        //ServicePointManager.CheckCertificateRevocationList = true;
-                        //ServicePointManager.DefaultConnectionLimit = 1000;
-                        //ServicePointManager.Expect100Continue = false;
-
-
-                        var resMessage = httpClient.Send(req);//.GetAsync(url);
-
-                        //檢查回應的伺服器狀態StatusCode是否是200 OK
-                        if (resMessage.StatusCode == HttpStatusCode.OK)
+                        revenueInfo.RevenueData.Add(new RevenueData()
                         {
-                            var sr = resMessage.Content.ReadAsStream();//.ReadAsStream();//.ReadAsStringAsync();
-                            var config = Configuration.Default;
-                            var context = BrowsingContext.New(config);
-                            var document = context.OpenAsync(res => res.Content(sr)).Result;
-                            var listTR = document.QuerySelectorAll("#qsp-revenue-table .table-body-wrapper ul li[class*='List']").Take(revenueMonthCount);
-                            var revenueInfo = new RevenueInfoModel() { StockId = item.StockId, StockName = item.StockName, RevenueData = new List<RevenueData>() };
-                            foreach (var tr in listTR)
-                            {
-                                revenueInfo.RevenueData.Add(new RevenueData()
-                                {
-                                    revenueInterval = tr.QuerySelector("div").Children[0].TextContent,//YYYY/MM
-                                    mom = Convert.ToDouble(tr.QuerySelectorAll("span")[1].TextContent.Replace("%", "")),//MOM 
-                                    monthYOY = Convert.ToDouble(tr.QuerySelectorAll("span")[3].TextContent.Replace("%", "")),//月營收年增率
-                                    yoy = Convert.ToDouble(tr.QuerySelectorAll("span")[6].TextContent.Replace("%", ""))//YOY
-                                });
-                            }
-
-                            lock (_lock)
-                            {
-                                res.Add(revenueInfo);
-                            }
-                        }
+                            revenueInterval = tr.QuerySelector("div").Children[0].TextContent,//YYYY/MM
+                            mom = Convert.ToDouble(tr.QuerySelectorAll("span")[1].TextContent.Replace("%", "")),//MOM 
+                            monthYOY = Convert.ToDouble(tr.QuerySelectorAll("span")[3].TextContent.Replace("%", "")),//月營收年增率
+                            yoy = Convert.ToDouble(tr.QuerySelectorAll("span")[6].TextContent.Replace("%", ""))//YOY
+                        });
                     }
-                });
+                    res.Add(revenueInfo);
+                }
             }
-            Task.WaitAll(tasks);
 
             return res;
         }
