@@ -6,12 +6,11 @@ using System.Threading.Tasks;
 
 namespace StockBuyingHelper.Service.Models
 {
-    public class PeInfoModel
+    public class EqsInfoModel
     {
         public string StockId { get; set; }
         public string StockName { get; set; }
         public string EpsAcc4QInterval { get; set; }
-        public decimal EpsAcc4Q { get; set; }
-        public double PE { get; set; }
+        public decimal EpsAcc4Q { get; set; }        
     }
 }
