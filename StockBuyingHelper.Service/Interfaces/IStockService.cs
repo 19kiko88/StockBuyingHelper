@@ -102,35 +102,34 @@ namespace StockBuyingHelper.Service.Interfaces
         /// <param name="data">資料來源</param>
         /// <param name="taskCount">多執行緒的Task數量</param>
         /// <returns></returns>
-        public Task<List<PeInfoModel>> GetPE(List<StockInfoModel> data, int taskCount = 25, string Os = "Windows");
+        public Task<List<EqsInfoModel>> GetEps(List<StockInfoModel> data, int taskCount = 25, string Os = "Windows");
 
         /// <summary>
         /// 篩選本益比(PE) & 近四季EPS
         /// </summary>
         /// <param name="data">資料來源</param>
         /// <param name="eps">近四季EPS篩選條件</param>
-        /// <param name="pe">近四季PE篩選條件</param>
         /// <param name="taskCount">多執行緒的Task數量</param>
         /// <returns></returns>
-        public Task<List<PeInfoModel>> GetFilterPe(List<StockInfoModel> data, decimal eps = 0, double pe = 25, string Os = "Windows", int taskCount = 25);
+        public Task<List<EqsInfoModel>> GetFilterEps(List<StockInfoModel> data, decimal eps = 0, string Os = "Windows", int taskCount = 25);
 
-        /// <summary>
-        /// 取得每月MoM. YoY增減趴數
+        /// <summary>        
+        /// 取得每月MoM. YoY增減趴數. PE (同一個頁面可以同時取得每月MoM. YoY增減趴數. PE，減少Request次數)
         /// </summary>
         /// <param name="data">資料來源</param>
         /// <param name="revenueMonthCount">顯示營收資料筆數(by 月)</param>
         /// <param name="taskCount">多執行緒數量</param>
         /// <returns></returns>
-        public Task<List<RevenueInfoModel>> GetRevenue(List<StockInfoModel> data, int revenueMonthCount = 3, int taskCount = 25);
+        public Task<List<RevenueInfoModel>> GetRevenueAndPe(List<StockInfoModel> data, int revenueMonthCount = 3, int taskCount = 25);
 
         /// <summary>
-        /// 篩選取得每月MoM. YoY增減趴數
+        /// 篩選取得每月MoM. YoY增減趴數. PE
         /// </summary>
         /// <param name="data">資料來源</param>
         /// <param name="revenueMonthCount">顯示營收資料筆數(by 月)</param>
         /// <param name="taskCount">多執行緒數量</param>
         /// <returns></returns>
-        public Task<List<RevenueInfoModel>> GetFilterRevenue(List<StockInfoModel> data, int revenueMonthCount = 3, int taskCount = 25);
+        public Task<List<RevenueInfoModel>> GetFilterRevenueAndPe(List<StockInfoModel> data, int revenueMonthCount = 3, double pe = 20, int taskCount = 25);
 
         [Obsolete("減少yahoo api發送request次數，改成逐步篩選")]
         /// <summary>
@@ -141,7 +140,7 @@ namespace StockBuyingHelper.Service.Interfaces
         /// <param name="peData">近四季EPS&PE資料</param>
         /// <param name="revenueData">近三個月營收MoM. YoY資料</param>
         /// <returns></returns>
-        public Task<List<BuyingResultModel>> GetBuyingResult(List<StockInfoModel> stockData, List<StockVtiInfoModel> vtiData, List<PeInfoModel> peData, List<RevenueInfoModel> revenueData, List<StockVolumeInfoModel> volumeData, string specificStockId = "");
+        public Task<List<BuyingResultModel>> GetBuyingResult(List<StockInfoModel> stockData, List<StockVtiInfoModel> vtiData, List<EqsInfoModel> peData, List<RevenueInfoModel> revenueData, List<StockVolumeInfoModel> volumeData, string specificStockId = "");
 
         [Obsolete("近四季EPS取得，改由GetPE從Yahoo Stock取得")]
         public Task<List<ObsoleteEpsInfoModel>> GetEPS(List<StockVtiInfoModel> data);

@@ -118,18 +118,21 @@ namespace StockBuingHelper.Web.Controllers
                 #endregion
 
                 #region get EPS & PE
-                //篩選條件4：近四季eps>0, pe<=25。縮小資料範圍
-                var listPe = await _stockService.GetFilterPe(volumeFilterData, reqData.epsAcc4Q.Value, reqData.pe.Value, _config.GetValue<string>("OperationSystem"));
-                var peIds = listPe.Select(cc => cc.StockId);
-                var peFilterData = listStockInfo.Where(c => peIds.Contains(c.StockId)).ToList();
+                //篩選條件4：近四季eps>1。縮小資料範圍
+                var listEps = await _stockService.GetFilterEps(volumeFilterData, reqData.epsAcc4Q.Value, _config.GetValue<string>("OperationSystem"));
+                var epsIds = listEps.Select(cc => cc.StockId);
+                var epsFilterData = listStockInfo.Where(c => epsIds.Contains(c.StockId)).ToList();
                 yahooApiRequestCount += volumeFilterData.Count;
                 _logger.LogInformation("GetFilterPe OK.");
                 #endregion
 
                 #region get Revenue
-                //篩選條件5：近3個月的月營收YoY必須為正成長 && 最新的YoY必須要大於0
-                var listRevenue = await _stockService.GetFilterRevenue(peFilterData, 6);
-                yahooApiRequestCount += peFilterData.Count;
+                /*篩選條件5：
+                 * 5-1：近3個月的月營收YoY必須為正成長 && 最新的YoY必須要大於0
+                 * 5-2：pe <= 20
+                 */
+                var listRevenue = await _stockService.GetFilterRevenueAndPe(epsFilterData, 6, reqData.pe.Value);
+                yahooApiRequestCount += epsFilterData.Count;
                 _logger.LogInformation("GetFilterRevenue OK.");
                 #endregion
 
@@ -137,8 +140,8 @@ namespace StockBuingHelper.Web.Controllers
 
                 res.Content =
                     (from revenue in listRevenue
-                     join pe in listPe on revenue.StockId equals pe.StockId
-                     join volume in listVolume on pe.StockId equals volume.StockId
+                     join eps in listEps on revenue.StockId equals eps.StockId
+                     join volume in listVolume on eps.StockId equals volume.StockId
                      join vti in listVti on volume.StockId equals vti.StockId
                      join highLowin52 in list52HighLow on vti.StockId equals highLowin52.StockId
                      join stockInfo in listStockInfo on highLowin52.StockId equals stockInfo.StockId
@@ -149,9 +152,9 @@ namespace StockBuingHelper.Web.Controllers
                          price = stockInfo.Price,
                          highIn52 = highLowin52.HighPriceInCurrentYear,
                          lowIn52 = highLowin52.LowPriceInCurrentYear,
-                         epsInterval = pe.EpsAcc4QInterval,
-                         eps = pe.EpsAcc4Q,
-                         pe = pe.PE,
+                         epsInterval = eps.EpsAcc4QInterval,
+                         eps = eps.EpsAcc4Q,
+                         pe = revenue.pe,
                          revenueDatas = revenue.RevenueData,
                          volumeDatas = volume.VolumeInfo.OrderByDescending(o => o.txDate).ToList(),
                          vti = Math.Round(vti.VTI * 100, 2),

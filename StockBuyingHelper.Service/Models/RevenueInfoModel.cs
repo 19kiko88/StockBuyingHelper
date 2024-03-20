@@ -10,6 +10,7 @@ namespace StockBuyingHelper.Service.Models
     {
         public string StockId { get; set; }
         public string StockName { get; set; }
+        public double pe { get; set; }
         public List<RevenueData> RevenueData { get; set; }
     }
 
@@ -18,6 +19,6 @@ namespace StockBuyingHelper.Service.Models
         public string revenueInterval { get; set; }
         public double mom { get; set; }
         public double monthYOY { get; set; }
-        public double yoy { get; set; }        
+        public double yoy { get; set; }              
     }
 }

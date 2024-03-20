@@ -2,6 +2,7 @@
 using System.IO.Compression;
 using System.Net;
 using System.Net.Http;
+using System.Reflection;
 using System.Reflection.PortableExecutable;
 using System.Security.Authentication;
 using System.Text;
@@ -476,9 +477,9 @@ namespace StockBuyingHelper.Service.Implements
         /// <param name="data">資料來源</param>
         /// <param name="taskCount">多執行緒的Task數量</param>
         /// <returns></returns>
-        public async Task<List<PeInfoModel>> GetPE(List<StockInfoModel> data, int taskCount = 25, string Os = "Windows")
+        public async Task<List<EqsInfoModel>> GetEps(List<StockInfoModel> data, int taskCount = 25, string Os = "Windows")
         {
-            var res = new List<PeInfoModel>();
+            var res = new List<EqsInfoModel>();
 
             //分群組 for 多執行緒分批執行
             var groups = TaskUtils.GroupSplit(data, taskCount);
@@ -530,13 +531,13 @@ namespace StockBuyingHelper.Service.Implements
                             }
 
                             var interval = deserializeData.data.data.result.revenues.Count > 0 ? $"{startQuater}~{endQuater}" : "";
-                    
-                            var peInfo = new PeInfoModel() {
-                                StockId = item.StockId, 
-                                StockName = item.StockName, 
+
+                            var peInfo = new EqsInfoModel()
+                            {
+                                StockId = item.StockId,
+                                StockName = item.StockName,
                                 EpsAcc4QInterval = interval,
-                                EpsAcc4Q = epsAcc4Q,
-                                PE = epsAcc4Q > 0 ? Convert.ToDouble(Math.Round(item.Price / epsAcc4Q, 2)) : 0
+                                EpsAcc4Q = epsAcc4Q,                                
                             };
 
                             lock (_lock)
@@ -560,16 +561,16 @@ namespace StockBuyingHelper.Service.Implements
         /// <param name="pe">近四季PE篩選條件</param>
         /// <param name="taskCount">多執行緒的Task數量</param>
         /// <returns></returns>
-        public async Task<List<PeInfoModel>> GetFilterPe(List<StockInfoModel> data, decimal eps = 0, double pe = 25, string Os = "Windows", int taskCount = 25)
+        public async Task<List<EqsInfoModel>> GetFilterEps(List<StockInfoModel> data, decimal eps = 0, string Os = "Windows", int taskCount = 25)
         {
-            var res = await GetPE(data, taskCount, Os);
+            var res = await GetEps(data, taskCount, Os);
 
             if (!IgnoreFilter)
             {
                 res =
                 (from a in res
                  join b in data on a.StockId equals b.StockId
-                 where StockType.ETFs.Contains(b.CFICode) || (b.CFICode == StockType.ESVUFR && (a.EpsAcc4Q > eps && a.PE <= pe))
+                 where StockType.ETFs.Contains(b.CFICode) || (b.CFICode == StockType.ESVUFR && (a.EpsAcc4Q > eps))
                  select a).ToList();     
             }       
 
@@ -577,13 +578,13 @@ namespace StockBuyingHelper.Service.Implements
         }
 
         /// <summary>
-        /// 取得每月MoM. YoY增減趴數
+        /// 取得每月MoM. YoY增減趴數. PE
         /// </summary>
         /// <param name="data">資料來源</param>
         /// <param name="revenueMonthCount">顯示營收資料筆數(by 月)</param>
         /// <param name="taskCount">多執行緒數量</param>
         /// <returns></returns>
-        public async Task<List<RevenueInfoModel>> GetRevenue(List<StockInfoModel> data, int revenueMonthCount = 3, int taskCount = 25)
+        public async Task<List<RevenueInfoModel>> GetRevenueAndPe(List<StockInfoModel> data, int revenueMonthCount = 3, int taskCount = 25)
         {
             var res = new List<RevenueInfoModel>();
             var config = Configuration.Default;
@@ -592,11 +593,11 @@ namespace StockBuyingHelper.Service.Implements
 
             foreach (var item in data)
             {
-                var url = $"https://tw.stock.yahoo.com/quote/{item.StockId}.TW/revenue"; //營收
+                var url = $"https://tw.stock.yahoo.com/quote/{item.StockId}.TW/revenue";
                 var resMessage = await httpClient.GetAsync(url);
 
                 //檢查回應的伺服器狀態StatusCode是否是200 OK
-                if (resMessage.StatusCode == System.Net.HttpStatusCode.OK)
+                if (resMessage.StatusCode == HttpStatusCode.OK)
                 {
                     var sr = await resMessage.Content.ReadAsStringAsync();
                     var document = await context.OpenAsync(res => res.Content(sr));
@@ -605,12 +606,16 @@ namespace StockBuyingHelper.Service.Implements
                     var revenueInfo = new RevenueInfoModel() { StockId = item.StockId, StockName = item.StockName, RevenueData = new List<RevenueData>() };
                     foreach (var tr in listTR)
                     {
+                        //取得本益比(pe)
+                        revenueInfo.pe = double.TryParse(document.QuerySelector("#main-0-QuoteHeader-Proxy div").ChildNodes[1].ChildNodes[1].ChildNodes[1].TextContent.Split('(')[0].Trim(), out var pe) ? pe : 99999d;
+
+                        //取得營收資料
                         revenueInfo.RevenueData.Add(new RevenueData()
                         {
                             revenueInterval = tr.QuerySelector("div").Children[0].TextContent,//YYYY/MM
                             mom = Convert.ToDouble(tr.QuerySelectorAll("span")[1].TextContent.Replace("%", "")),//MOM 
                             monthYOY = Convert.ToDouble(tr.QuerySelectorAll("span")[3].TextContent.Replace("%", "")),//月營收年增率
-                            yoy = Convert.ToDouble(tr.QuerySelectorAll("span")[6].TextContent.Replace("%", ""))//YOY
+                            yoy = Convert.ToDouble(tr.QuerySelectorAll("span")[6].TextContent.Replace("%", "")),//YOY
                         });
                     }
                     res.Add(revenueInfo);
@@ -621,22 +626,23 @@ namespace StockBuyingHelper.Service.Implements
         }
 
         /// <summary>
-        /// 篩選取得每月MoM. YoY增減趴數
+        /// 篩選取得每月MoM. YoY增減趴數. PE
         /// </summary>
         /// <param name="data">資料來源</param>
         /// <param name="revenueMonthCount">顯示營收資料筆數(by 月)</param>
+        /// <param name="pe">本益比(PE)</param>
         /// <param name="taskCount">多執行緒數量</param>
         /// <returns></returns>
-        public async Task<List<RevenueInfoModel>> GetFilterRevenue(List<StockInfoModel> data, int revenueMonthCount = 3, int taskCount = 25)
+        public async Task<List<RevenueInfoModel>> GetFilterRevenueAndPe(List<StockInfoModel> data, int revenueMonthCount = 3, double pe = 20, int taskCount = 25)
         {
-            var res = await GetRevenue(data, revenueMonthCount, taskCount);
+            var res = await GetRevenueAndPe(data, revenueMonthCount, taskCount);
 
             if (!IgnoreFilter)
             {
                 res = (from a in res
                        join b in data on a.StockId equals b.StockId
                        where
-                         (b.CFICode == StockType.ESVUFR && (!a.RevenueData.Take(3).Where(c => c.monthYOY < 0).Any() && a.RevenueData[0].yoy > 0))
+                         (b.CFICode == StockType.ESVUFR && (!a.RevenueData.Take(3).Where(c => c.monthYOY < 0).Any() && a.RevenueData[0].yoy > 0) && (a.pe <= pe))
                          ||
                          StockType.ETFs.Contains(b.CFICode)
                        orderby b.CFICode descending
@@ -657,12 +663,12 @@ namespace StockBuyingHelper.Service.Implements
         /// <param name="peData">近四季EPS&PE資料</param>
         /// <param name="revenueData">近三個月營收MoM. YoY資料</param>
         /// <returns></returns>
-        public async Task<List<BuyingResultModel>> GetBuyingResult(List<StockInfoModel> stockData, List<StockVtiInfoModel> vtiData, List<PeInfoModel> peData, List<RevenueInfoModel> revenueData, List<StockVolumeInfoModel> volumeData, string specificStockId = "")
+        public async Task<List<BuyingResultModel>> GetBuyingResult(List<StockInfoModel> stockData, List<StockVtiInfoModel> vtiData, List<EqsInfoModel> eqsData, List<RevenueInfoModel> revenueData, List<StockVolumeInfoModel> volumeData, string specificStockId = "")
         {
             var data =
                 (from a in stockData
                  join b in vtiData on a.StockId equals b.StockId
-                 join c in peData on a.StockId equals c.StockId
+                 join c in eqsData on a.StockId equals c.StockId
                  join d in revenueData on a.StockId equals d.StockId
                  join e in volumeData on a.StockId equals e.StockId
                  select new BuyingResultModel
@@ -675,7 +681,7 @@ namespace StockBuyingHelper.Service.Implements
                      LowIn52 = b.LowIn52,
                      EpsInterval = c.EpsAcc4QInterval,
                      EPS = c.EpsAcc4Q,
-                     PE = c.PE,
+                     //PE = c.PE,
                      RevenueDatas = d.RevenueData,
                      VolumeDatas = e.VolumeInfo,
                      VTI = b.VTI,
