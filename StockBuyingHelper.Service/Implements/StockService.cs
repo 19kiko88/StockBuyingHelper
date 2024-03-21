@@ -603,12 +603,16 @@ namespace StockBuyingHelper.Service.Implements
                     var document = await context.OpenAsync(res => res.Content(sr));
 
                     var listTR = document.QuerySelectorAll("#qsp-revenue-table .table-body-wrapper ul li[class*='List']").Take(revenueMonthCount);
-                    var revenueInfo = new RevenueInfoModel() { StockId = item.StockId, StockName = item.StockName, RevenueData = new List<RevenueData>() };
-                    foreach (var tr in listTR)
-                    {
-                        //取得本益比(pe)
-                        revenueInfo.pe = double.TryParse(document.QuerySelector("#main-0-QuoteHeader-Proxy div").ChildNodes[1].ChildNodes[1].ChildNodes[1].TextContent.Split('(')[0].Trim(), out var pe) ? pe : 99999d;
 
+                    var revenueInfo = new RevenueInfoModel() { 
+                        StockId = item.StockId, 
+                        StockName = item.StockName,
+                        pe = double.TryParse(document.QuerySelector("#main-0-QuoteHeader-Proxy div").ChildNodes[1].ChildNodes[1].ChildNodes[1].TextContent.Split('(')[0].Trim(), out var pe) ? pe : 99999d,//取得本益比(pe)
+                        RevenueData = new List<RevenueData>() 
+                    };
+
+                    foreach (var tr in listTR)
+                    {                                               
                         //取得營收資料
                         revenueInfo.RevenueData.Add(new RevenueData()
                         {
