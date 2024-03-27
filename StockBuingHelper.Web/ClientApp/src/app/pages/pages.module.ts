@@ -1,6 +1,7 @@
 import { HomeModule } from './home/home.module';
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { LoginModule } from './login/login.module';
 //import { AdminModule } from './admin/admin.module';
 
 
@@ -9,10 +10,12 @@ import { CommonModule } from '@angular/common';
   imports: [
     CommonModule,
     HomeModule,
+    LoginModule,
     //AdminModule //改lazy loading
   ],
   exports:[
-    HomeModule,
+    HomeModule,  
+    LoginModule  
     //AdminModule //改lazy loading
   ]
 })
