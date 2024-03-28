@@ -646,7 +646,13 @@ namespace StockBuyingHelper.Service.Implements
                 res = (from a in res
                        join b in data on a.StockId equals b.StockId
                        where
-                         (b.CFICode == StockType.ESVUFR && (!a.RevenueData.Take(3).Where(c => c.monthYOY < 0).Any() && a.RevenueData[0].yoy > 0) && (a.pe <= pe))
+                         (
+                            b.CFICode == StockType.ESVUFR && 
+                            (
+                                !a.RevenueData.Take(3).Where(c => c.monthYOY < 0).Any() && 
+                                (a.RevenueData.Count > 0 && a.RevenueData[0].yoy > 0)
+                            ) && (a.pe <= pe)
+                         )
                          ||
                          StockType.ETFs.Contains(b.CFICode)
                        orderby b.CFICode descending
