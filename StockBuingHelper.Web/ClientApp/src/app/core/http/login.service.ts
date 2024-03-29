@@ -11,17 +11,15 @@ import { IResultDto } from '../dtos/response/result-dto';
 export class LoginService extends BaseService {
 
   constructor(
-    private _httpClient: HttpClient
+    private _httpClient: HttpClient    
   ) {
     super()
    }
 
   JwtLogin(data: LoginDto)
   {
-    debugger;
     const url = `${environment.apiBaseUrl}/Login/Login`;    
-    let reqHeaders = new HttpHeaders().set('Content-Type','application/json');
-    
+    let reqHeaders = new HttpHeaders().set('Content-Type','application/json');    
     let params = JSON.stringify(data);
 
     return this._httpClient.post<IResultDto<any>>(url, params, {headers:reqHeaders});

@@ -1,7 +1,8 @@
 import { Component, OnInit } from '@angular/core';
-import { FormBuilder, FormGroup } from '@angular/forms';
+import { Router } from '@angular/router';
 import { LoginDto } from 'src/app/core/dtos/request/login-dto';
 import { LoginService } from 'src/app/core/http/login.service';
+import { JwtInfoService } from 'src/app/core/services/jwt-info.service';
 
 @Component({
   selector: 'app-login',
@@ -13,36 +14,43 @@ import { LoginService } from 'src/app/core/http/login.service';
 
 export class LoginComponent implements OnInit 
 {
-  form!:FormGroup;
   errorMessage: string = '';  
   account?: string = '';
-  password?: string = '';
+  password: string = '';
 
-  constructor(
+  constructor(    
     private _loginService: LoginService,
-    private _formBuilder: FormBuilder,
+    private _router: Router,
+    private _jwtService: JwtInfoService
   ){
 
   }
 
-  ngOnInit(): void {
-    this.form = this._formBuilder.group({
-      specificStockId: [''],
-      vtiRanges: [],
-      etfDisplay : false
-    })
+  ngOnInit(): void 
+  {
   }
 
   login()
   {
-    debugger
     let data:LoginDto = {Account: this.account, Password: this.password}
     this._loginService.JwtLogin(data).subscribe({
-      next: c => {
-        alert('qq~');
+      next: res => {
+        debugger;
+        if (res.message)
+        {          
+          alert(this.errorMessage = res.message);
+          return;
+        }
+        else
+        {//沒有錯誤訊息
+          this._jwtService.jwt = res.content;
+          this._router.navigate(['/main']);
+        }
       },
-      error: () => {
-
+      error: ex => 
+      {
+        alert(ex.message);
+        return;
       }
     })
   }

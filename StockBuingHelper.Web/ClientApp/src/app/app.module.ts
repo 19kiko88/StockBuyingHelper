@@ -6,8 +6,6 @@ import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
 import { SharedModule } from './shared/shared.module';
 import { PagesModule } from './pages/pages.module';
 import { CoreModule } from './core/core.module';
-import { FormsModule } from '@angular/forms';
-
 
 @NgModule({
   declarations: [
