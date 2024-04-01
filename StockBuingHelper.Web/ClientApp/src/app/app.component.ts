@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { JwtInfoService } from './core/services/jwt-info.service';
 
 @Component({
@@ -7,24 +7,32 @@ import { JwtInfoService } from './core/services/jwt-info.service';
   styleUrls: ['./app.component.css']
 })
 
-export class AppComponent {
+export class AppComponent implements OnInit {
   title = '買股小幫手';
 
   jwtValidate: boolean = false;
   isLoader: boolean = false;
   loadingMsg: string|undefined = '';
+  jwtvalid: boolean = false;
 
   constructor(
-    private _jwt: JwtInfoService,
+    private _jwtService: JwtInfoService,
   ) 
-  {       
-    if(_jwt.jwt && !_jwt.jwtExpired)
-    {
-      _jwt.jwtSignatureVerifydq().then(res => {
-        alert(res);
-      })
-    }
-  }
+  {}
 
+
+  ngOnInit(): void 
+  {
+    // if(this._jwtService.jwt && !this._jwtService.jwtExpired)
+    // {
+    //   this._jwtService.jwtSignatureVerify().then(res => {
+    //     alert(res);
+    //   })
+    // }
+
+    this._jwtService.jwtValid$.subscribe(res => {
+      this.jwtvalid = res;
+    })
+  }
   
 }

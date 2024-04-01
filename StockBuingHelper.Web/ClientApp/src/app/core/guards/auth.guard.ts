@@ -4,8 +4,6 @@ import { JwtInfoService } from '../services/jwt-info.service';
 
 export const authGuard: CanActivateFn = (route, state) => {  
 
-  debugger;
-
   const _router =  inject(Router);
   const _jwtService =  inject(JwtInfoService);
 
@@ -14,14 +12,18 @@ export const authGuard: CanActivateFn = (route, state) => {
     if (_jwtService.jwtExpired)
     {
       alert('jwt expired, login again.');
+      _jwtService.setJwtValid(false);
       return _router.createUrlTree(['/login'])
     }
   }
   else
   {
     alert('not login.');
+    _jwtService.setJwtValid(false);
     return _router.createUrlTree(['/login'])
   }
+
+  _jwtService.setJwtValid(true);
 
   return true;
 };
