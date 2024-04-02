@@ -14,18 +14,52 @@ namespace StockBuyingHelper.Service.Implements
 {
     public class LoginService: ILoginService
     {
-        private readonly IConfiguration _config;
+        private readonly IRsaService _rasService;
 
-        public LoginService()
+        public LoginService(IRsaService rasService)
         {
+            _rasService = rasService;
         }
 
 
+        /// <summary>
+        /// 登入 (取得JWT Token)
+        /// Ref：
+        /// (YouTube)https://www.youtube.com/watch?v=rH_fZ4Zkxic&ab_channel=TechnoSaviour
+        /// (GitHub)https://github.com/Technosaviour/RSA-net-core/tree/RSA-Angular-net-core
+        /// https://pieterdlinde.medium.com/angular-rsa-encryption-netcore-decryption-public-private-key-78f2770f955f
+        /// </summary>
+        /// <param name="jwtSettings"></param>
+        /// <param name="account"></param>
+        /// <param name="password"></param>
+        /// <returns></returns>
         public async Task<(string jwtToken, string errorMsg)> JwtLogin(AppSettings.JwtSettings jwtSettings, string account, string password)
         {
             var errorMsg = string.Empty;
             var user = new UserInfoModel();
             var jwtToken = string.Empty;
+            //模擬DB資料
+            var mockDbUser = new List<UserInfoModel>()
+            {
+                new UserInfoModel(){ 
+                    Account = "Admin",
+                    //Password為加上PasswordSalt後的完整密碼的雜湊值
+                    Password = "a4cmsDIckfdXpRvqlrrjfL+qQi3huPGjXT40+ftLAJO685B42T45bN22EEKTdoKW17Hd6+edxpm3z3nno9QIZG0p4hDszQIfxYYpKYbrMgNABfDanymuqRFv12nZCCt0eRMF7qrWX5TejKaHc6RyE1J/bnyu5PQL/inAkMnw0UITgyQxPWadNszO304oHSP197oUTlNCJHSPnfzmQXvEF8Px/w9id/o5W1o7UzmguIlACCiZuryzNfeo7lpUjvcWjNVyUiyoFGXWuKxdfq4OBolfUYAmhnrTY+nA1S0w9H8UEaLv0vAtgrDZYivNXg7DH/2YQtRV4alXzsWyLygHwA==",
+                    PasswordSalt = "onLrFc",
+                    Name = "管理員",
+                    Email = "Admin@test.com",
+                    Role = "1"
+                },
+                new UserInfoModel(){
+                    Account = "Test_Account",
+                    //Password為加上PasswordSalt後的完整密碼的雜湊值
+                    Password = "chBVb0lkT4SLeOLKjPdHU+kTCyut1HbWAk8NBqC/LXW9jm9EUfsByLbf5NdHtLa7/wTtZY4kJUvHRTY7BpDwmm2Vd1DyUNETCXPBPuLx54XBKRkV6J0shUzzVFF3haYE3x2OJL48t/hy7yGiGw8FBUvEiFILzjII0i55uggfWEQyXb71nBBMQLJbgUVsJUOCodD36nEu4QgYg4a9PRp3zAcTmg1NUD+GZdCk2fBMOGXLKFRAvSw96TY8QASnx8lOsTV5k8GlfJC1Zu4T7OJXi2rRJFbRJWJQp0B+2n7DwfH+IxP4wh1+/PvU/wweNCkhyUiNsV3yc9XytSo7p8WGRw==",
+                    PasswordSalt = "eeoBIB",
+                    Name = "測試帳號",
+                    Email = "Test@test.com",
+                    Role = "999"
+                },
+            };
 
             if (string.IsNullOrEmpty(account))
             {
@@ -33,20 +67,26 @@ namespace StockBuyingHelper.Service.Implements
                 return (jwtToken: jwtToken, errorMsg: errorMsg);
             }
 
-            if (account == "homer_chen" && password == "Ab12345678")
+            user = mockDbUser.Where(c => c.Account.ToLower() == account.ToLower()).FirstOrDefault();
+            if (user != null)
             {
-                user = new UserInfoModel()
+                //(私Key)解密   
+                var decryptPsw = _rasService.Decrypt(password);
+
+                //頭尾補上英文salt字串
+                var pswWithSalt = $"{user.PasswordSalt.Substring(3, 3)}{decryptPsw}{user.PasswordSalt.Substring(0, 3)}";
+
+                //密碼比對(RSA加密後的結果每次都不會一樣，所以要解密後再進行比對。)
+                var pswCompare = _rasService.Decrypt(user.Password) == pswWithSalt ? true : false;
+
+                if (pswCompare == false)
                 {
-                    Account = account,
-                    EmployeeId = "AA12345678",
-                    Name = "Test",
-                    Email = "Test@test.com",
-                    Role = "1"
-                };
+                    return (jwtToken: jwtToken, errorMsg: "密碼錯誤.");
+                }                
             }
             else
             {
-                return (jwtToken: jwtToken, errorMsg: "帳號密碼錯誤.");
+                return (jwtToken: jwtToken, errorMsg: "帳號錯誤.");
             }
 
             var claims = new List<Claim>

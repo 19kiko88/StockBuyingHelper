@@ -11,14 +11,14 @@ export const authGuard: CanActivateFn = (route, state) => {
   {
     if (_jwtService.jwtExpired)
     {
-      alert('jwt expired, login again.');
+      console.log('jwt expired, login again.');
       _jwtService.setJwtValid(false);
       return _router.createUrlTree(['/login'])
     }
   }
   else
   {
-    alert('not login.');
+    console.log('not login.');
     _jwtService.setJwtValid(false);
     return _router.createUrlTree(['/login'])
   }
