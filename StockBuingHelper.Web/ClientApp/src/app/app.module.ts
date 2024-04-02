@@ -7,7 +7,6 @@ import { SharedModule } from './shared/shared.module';
 import { PagesModule } from './pages/pages.module';
 import { CoreModule } from './core/core.module';
 
-
 @NgModule({
   declarations: [
     AppComponent
