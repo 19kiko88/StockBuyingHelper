@@ -1,22 +1,26 @@
-<app-header></app-header>
+  
+  <ng-container *ngIf="jwtvalid == true">
+    <app-header></app-header>
+    <div id="layoutSidenav">  
+      <app-side-nav></app-side-nav>
+  
+      <div id="layoutSidenav_content">
+          <main>
+            <article>
+              <div class="wrap">
+                <router-outlet></router-outlet>
+              </div>
+            </article>
+          </main>
+        
+        <app-footer></app-footer>
+      </div>
+    </div>
+  </ng-container>
 
-<div id="layoutSidenav">
-
-  <app-side-nav></app-side-nav>
-
-  <div id="layoutSidenav_content">
-      <main>
-        <article>
-          <div class="wrap">
-            <router-outlet></router-outlet>
-          </div>
-        </article>
-      </main>
-
-    <app-footer></app-footer>
-
-  </div>
-</div>
+  <ng-container *ngIf="jwtvalid == false">
+    <app-login></app-login>
+  </ng-container>
 
 <app-loading></app-loading>  
 
