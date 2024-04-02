@@ -38,4 +38,10 @@
     <ProjectReference Include="..\StockBuyingHelper.Service\StockBuyingHelper.Service.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="Keys\sbh.pub.pem">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>
