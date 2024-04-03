@@ -1,7 +1,9 @@
-﻿using Org.BouncyCastle.Crypto;
+﻿using Microsoft.Extensions.Options;
+using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Crypto.Parameters;
 using Org.BouncyCastle.OpenSsl;
 using Org.BouncyCastle.Security;
+using StockBuyingHelper.Models;
 using StockBuyingHelper.Service.Interfaces;
 using System.Security.Cryptography;
 using System.Text;
@@ -10,16 +12,24 @@ namespace StockBuyingHelper.Service.Implements
 {
     public class RsaService: IRsaService
     {
+        private readonly AppSettings.CustomizeSettings _appCustSettings;
+
+        public RsaService(IOptions<AppSettings.CustomizeSettings> appCustSettings)
+        {
+            _appCustSettings = appCustSettings.Value;
+        }
+
+
         public string Encrypt(string text)
         {
-            var _publicKey = GetPublicKeyFromPemFile(@".\Keys\sbh.pub.pem");
+            var _publicKey = GetPublicKeyFromPemFile(_appCustSettings.PathSettings.RsaPublicKeyPem);
             var encryptedBytes = _publicKey.Encrypt(Encoding.UTF8.GetBytes(text), false);
             return Convert.ToBase64String(encryptedBytes);
         }
 
         public string Decrypt(string encrypted)
         {
-            var _privateKey = GetPrivateKeyFromPemFile(@".\Keys\sbh.key.pem");
+            var _privateKey = GetPrivateKeyFromPemFile(_appCustSettings.PathSettings.RsaPrivateKeyPem);
             var decryptedBytes = _privateKey.Decrypt(Convert.FromBase64String(encrypted), false);
             return Encoding.UTF8.GetString(decryptedBytes, 0, decryptedBytes.Length);
         }

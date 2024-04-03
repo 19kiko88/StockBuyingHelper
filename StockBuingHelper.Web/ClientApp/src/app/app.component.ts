@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { JwtInfoService } from './core/services/jwt-info.service';
+import { UserInfo } from './core/models/user-info';
 
 @Component({
   selector: 'app-root',
@@ -14,6 +15,7 @@ export class AppComponent implements OnInit {
   isLoader: boolean = false;
   loadingMsg: string|undefined = '';
   jwtvalid: boolean = false;
+  userInfo?: UserInfo;
 
   constructor(
     private _jwtService: JwtInfoService,
@@ -32,6 +34,19 @@ export class AppComponent implements OnInit {
 
     this._jwtService.jwtValid$.subscribe(res => {
       this.jwtvalid = res;
+
+      if (res && this._jwtService.jwt) 
+      {
+        let payload = JSON.parse(window.atob(this._jwtService.jwt.split('.')[1]));
+        
+        this.userInfo = {
+          account: payload.Account,
+          name: payload.Name,
+          email: payload.Email,
+          role: payload.Role
+        };        
+      }
+      
     })
   }
   

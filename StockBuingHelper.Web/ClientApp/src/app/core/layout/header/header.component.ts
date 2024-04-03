@@ -1,4 +1,5 @@
-import { Component, OnInit } from '@angular/core';
+import { UserInfo } from '../../models/user-info';
+import { Component, Input, OnInit } from '@angular/core';
 
 @Component({
   selector: 'app-header',
@@ -7,9 +8,14 @@ import { Component, OnInit } from '@angular/core';
 })
 export class HeaderComponent implements OnInit {
 
+  userAccount: string = '';
+  @Input() inputUserInfo : UserInfo | undefined
+
   constructor() { }
 
-  ngOnInit(): void {
+  ngOnInit(): void 
+  {
+    this.userAccount = this.inputUserInfo?.account ?? '';
   }
 
 }
