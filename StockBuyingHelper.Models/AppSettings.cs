@@ -22,5 +22,18 @@ namespace StockBuyingHelper.Models
             public string ValidAudience { get; set; }
             public string Key { get; set; }
         }
+
+        public class CustomizeSettings
+        {
+            public string OperationSystem { get; set; } = string.Empty;
+            public PathSettings? PathSettings { get; set; }
+            public List<string>? List0050 { get; set; }
+        }
+    }
+
+    public class PathSettings
+    {
+        public string RsaPublicKeyPem { get; set; } = string.Empty;
+        public string RsaPrivateKeyPem { get; set; } = string.Empty;
     }
 }

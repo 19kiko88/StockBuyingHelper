@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using StockBuingHelper.Web.Dtos.Request;
 using StockBuingHelper.Web.Dtos.Response;
+using StockBuyingHelper.Models;
 using StockBuyingHelper.Models.Models;
 using StockBuyingHelper.Service.Interfaces;
 using StockBuyingHelper.Service.Models;
@@ -17,21 +19,21 @@ namespace StockBuingHelper.Web.Controllers
         private readonly IStockService _stockService;
         private readonly IVolumeService _volumeService;
         private readonly IAdminService _adminService;
-        private readonly IConfiguration _config;
+        private readonly AppSettings.CustomizeSettings _appCustSettings;
         private readonly ILogger<StockController> _logger;
 
         public StockController(
             IStockService stockService, 
             IVolumeService volumeService, 
             IAdminService adminService,
-            IConfiguration config,
+            IOptions<AppSettings.CustomizeSettings> appCustSettings,
             ILogger<StockController> logger
             )
         {
             _stockService = stockService;
             _volumeService = volumeService;
             _adminService = adminService;
-            _config = config;
+            _appCustSettings = appCustSettings.Value;
             _logger = logger;
         }
 
@@ -69,7 +71,7 @@ namespace StockBuingHelper.Web.Controllers
                 if (reqData.queryType == "0050")
                 {
                     _stockService.IgnoreFilter = true;
-                    filterIds = _config.GetSection("0050List").Get<List<string>>();
+                    filterIds = _appCustSettings.List0050;
                 }
                 else if (!string.IsNullOrEmpty(reqData.specificStockId))
                 {
@@ -119,7 +121,7 @@ namespace StockBuingHelper.Web.Controllers
 
                 #region get EPS & PE
                 //篩選條件4：近四季eps>1。縮小資料範圍
-                var listEps = await _stockService.GetFilterEps(volumeFilterData, reqData.epsAcc4Q.Value, _config.GetValue<string>("OperationSystem"));
+                var listEps = await _stockService.GetFilterEps(volumeFilterData, reqData.epsAcc4Q.Value, _appCustSettings.OperationSystem);
                 var epsIds = listEps.Select(cc => cc.StockId);
                 var epsFilterData = listStockInfo.Where(c => epsIds.Contains(c.StockId)).ToList();
                 yahooApiRequestCount += volumeFilterData.Count;

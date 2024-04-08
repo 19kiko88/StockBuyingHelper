@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
@@ -63,7 +62,7 @@ builder.Services.AddSpaStaticFiles(configuration =>
 {
     configuration.RootPath = "wwwroot";
 });
-builder.Services.Configure<AppSettings.ConnectionStrings>(builder.Configuration.GetSection(AppSettings._ConnectionStrings));
+
 builder.Services.AddScoped<IStockService, StockService>();
 builder.Services.AddScoped<IVolumeService, VolumeService>();
 builder.Services.AddScoped<IAdminService, AdminService>();
@@ -72,7 +71,12 @@ builder.Services.AddScoped<ILoginService, LoginService>();
 builder.Services.AddScoped<ILoginService, LoginService>();
 builder.Services.AddScoped<ILoginService, LoginService>();
 builder.Services.AddScoped<IRsaService, RsaService>();
+
+
+//builder.Services.AddOptions();
+builder.Services.Configure<AppSettings.ConnectionStrings>(builder.Configuration.GetSection(AppSettings._ConnectionStrings));
 builder.Services.Configure<AppSettings.JwtSettings>(builder.Configuration.GetSection(AppSettings._JwtSettings));
+builder.Services.Configure<AppSettings.CustomizeSettings>(builder.Configuration.GetSection("CustomizeSettings"));
 
 
 /*CORS*/

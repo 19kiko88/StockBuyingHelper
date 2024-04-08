@@ -1,0 +1,189 @@
+<section class="panel panel-default panel-article marg10-t">
+    <div class="panel-heading">
+      <h3 class="panel-title">
+        <i class="circle fa fa-search"></i>資料查詢
+      </h3>
+    </div>
+  
+    <div class="panel-body">  
+      <div class="article-container">
+  
+        <div class="container">
+            <form class="row g-3" [formGroup]="form" (ngSubmit)="submit()">
+            
+
+              <div class="col-12 col-md-12">
+                <label for="inputAddress2" class="form-label">查詢類別</label>
+
+                <br/>
+
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input" type="radio" name="inlineRadioOptions" value="default" [checked]="true" (change)="changeQueryType($event)">
+                  <label class="form-check-label" for="inlineRadio1">預設</label>
+                </div>
+
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input" type="radio" name="inlineRadioOptions" value="manual" (change)="changeQueryType($event)">
+                  <label class="form-check-label" for="inlineRadio1">自行輸入</label>
+                </div>
+
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input" type="radio" name="inlineRadioOptions" value="0050" (change)="changeQueryType($event)">
+                  <label class="form-check-label" for="inlineRadio2">0050</label>
+                </div>
+                <!-- {{queryType}} -->
+              </div>              
+              
+<!-- 
+              <div class="col-12">
+                  <label for="customRange3" class="form-label">VTI指數({{vtiRange}})</label>
+                  <input formControlName="vtiRange" [(ngModel)]="vtiRange" type="range" class="form-range" min="500" max="1000" step="10">
+              </div> -->
+
+              <ng-container *ngIf="queryType == 'default'">
+                <div class="col-12">
+                  <!-- <h5>Range: {{rangeValues[0] + ' - ' + rangeValues[1]}}</h5> -->
+                  <label for="customRange3" class="form-label">VTI指數({{vtiRange[0] + ' - ' + vtiRange[1]}})</label>
+                  <p-slider formControlName="vtiRanges" [(ngModel)]="vtiRange" [min]=60 [max]=100 [range]="true"></p-slider>
+                </div>
+  
+                <div class="col-12">
+                  <div class="form-check">
+                    <input formControlName="etfDisplay" class="form-check-input" type="checkbox">
+                    <label class="form-check-label" for="gridCheck">
+                      顯示ETF資料
+                    </label>
+                  </div>
+                </div>
+              </ng-container>
+
+              <ng-container *ngIf="queryType == 'manual'">
+                <div class="col-12 col-md-6">
+                  <label for="inputAddress2" class="form-label">個股查詢</label>
+                  <input formControlName="specificStockId" type="text" class="form-control" placeholder="股票代碼">
+                </div>  
+              </ng-container>
+
+              <div class="col-12">
+                <button type="submit" class="btn btn-primary">送出查詢</button>
+              </div>
+              
+              </form>   
+          </div>
+        
+      </div>
+   
+    </div>
+  </section>
+  
+  <div class="card">
+    <div  style="padding:20px;">
+      
+      <p-table [value]="vtiRes" styleClass="p-datatable-gridlines" dataKey="stockId" [tableStyle]="{ 'min-width': '60rem' }">
+        <ng-template pTemplate="header">
+            <tr>
+                <th style="width: 5rem"></th>
+                <th pSortableColumn="sn"># <p-sortIcon field="sn"></p-sortIcon></th>
+                <th pSortableColumn="stockId">股票代碼 <p-sortIcon field="stockId"></p-sortIcon></th>
+                <th pSortableColumn="stockName">股票名稱 <p-sortIcon field="stockName"></p-sortIcon></th>
+                <th pSortableColumn="price">成交價 <p-sortIcon field="price"></p-sortIcon></th>
+                <th pSortableColumn="highIn52">52周最高價 <p-sortIcon field="highIn52"></p-sortIcon></th>
+                <th pSortableColumn="lowIn52">52周最低價 <p-sortIcon field="lowIn52"></p-sortIcon></th>
+                <th pSortableColumn="epsInterval">EPS區間 <p-sortIcon field="epsInterval"></p-sortIcon></th>
+                <th pSortableColumn="eps">(近四季)EPS <p-sortIcon field="eps"></p-sortIcon></th>
+                <th pSortableColumn="pe">PE <p-sortIcon field="pe"></p-sortIcon></th>
+                <th pSortableColumn="vti">VTI <p-sortIcon field="vti"></p-sortIcon></th>
+                <th pSortableColumn="amount">購買數 <p-sortIcon field="amount"></p-sortIcon></th>
+              </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-vtiData let-expanded="expanded">
+            <tr>
+                <td>
+                    <button type="button" pButton pRipple [pRowToggler]="vtiData" class="p-button-text p-button-rounded p-button-plain" [icon]="expanded ? 'pi pi-chevron-down' : 'pi pi-chevron-right'"></button>
+                </td>
+                <td> {{ vtiData.sn }}</td>
+                <td><a href="https://www.wantgoo.com/stock/{{vtiData.stockId}}" target="_blank">{{ vtiData.stockId }}</a></td>
+                <td>{{ vtiData.stockName }}</td>
+                <td>{{ vtiData.price }}</td>
+                <td>{{ vtiData.highIn52 }}</td>
+                <td>{{ vtiData.lowIn52 }}</td>
+                <td>{{ vtiData.epsInterval }}</td>
+                <td>{{ vtiData.eps }}</td>
+                <td>{{ vtiData.pe }}</td>
+                <td>{{ vtiData.vti }}</td>
+                <td>{{ vtiData.amount }}</td>
+            </tr>
+        </ng-template>
+
+        <ng-template pTemplate="rowexpansion" let-vtiData>
+
+            <tr>
+                <td colspan="11">
+                    <div class="p-3">
+                      <p-table [value]="vtiData.revenueDatas" styleClass="p-datatable-gridlines p-datatable-striped">
+                        <ng-template pTemplate="header">
+                            <tr>
+                                <th pSortableColumn="revenueInterval">營收區間 <p-sortIcon field="revenueInterval"></p-sortIcon></th>
+                                <th pSortableColumn="mom">MoM <p-sortIcon field="mom"></p-sortIcon></th>
+                                <th pSortableColumn="monthYOY">月營收YoY <p-sortIcon field="monthYOY"></p-sortIcon></th>
+                                <th pSortableColumn="yoy">YoY <p-sortIcon field="yoy"></p-sortIcon></th>
+                            </tr>
+                        </ng-template>
+                        <ng-template pTemplate="body" let-revenueDatas>
+                            <tr>
+                                <td>{{ revenueDatas.revenueInterval }}</td>
+                                <td>{{ revenueDatas.mom }}</td>
+                                <td>{{ revenueDatas.monthYOY }}</td>
+                                <td>{{ revenueDatas.yoy }}</td>
+                            </tr>
+                        </ng-template>
+                        <ng-template pTemplate="emptymessage">
+                            <tr>
+                                <td colspan="4">查無營收資料.</td>
+                            </tr>
+                        </ng-template>
+                      </p-table>
+                    </div>
+                </td>
+            </tr>
+
+            <tr>
+              <td colspan="11">
+                <div class="p-3">
+                  <p-table [value]="vtiData.volumeDatas" styleClass="p-datatable-gridlines p-datatable-striped">
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th pSortableColumn="txDate">交易日 <p-sortIcon field="txDate"></p-sortIcon></th>
+                            <th pSortableColumn="foreignDiffVolK">外資成交量 <p-sortIcon field="foreignDiffVolK"></p-sortIcon></th>
+                            <th pSortableColumn="dealerDiffVolK">自營成交量 <p-sortIcon field="dealerDiffVolK"></p-sortIcon></th>
+                            <th pSortableColumn="investmentTrustDiffVolK">投信成交量 <p-sortIcon field="investmentTrustDiffVolK"></p-sortIcon></th>
+                            <th pSortableColumn="volumeK">總量 <p-sortIcon field="volumeK"></p-sortIcon></th>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-volumeDatas>
+                        <tr>
+                            <td>{{ volumeDatas.txDate }}</td>
+                            <td>{{ volumeDatas.foreignDiffVolK }}</td>
+                            <td>{{ volumeDatas.dealerDiffVolK }}</td>
+                            <td>{{ volumeDatas.investmentTrustDiffVolK }}</td>
+                            <td>{{ volumeDatas.volumeK }}</td>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="emptymessage">
+                        <tr>
+                            <td colspan="4">查無成交量資料.</td>
+                        </tr>
+                    </ng-template>
+                  </p-table>
+                </div>
+              </td>
+            </tr>
+
+        </ng-template>
+
+      </p-table>
+
+      <!-- {{vtiRes|json}} -->
+
+    </div>
+  </div>

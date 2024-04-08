@@ -1,7 +1,10 @@
   
-  <ng-container *ngIf="jwtvalid == true">
-    <app-header></app-header>
+  <ng-container *ngIf="login == true">
+    <app-header [inputUserInfo]="userInfo"></app-header>
+    
+
     <div id="layoutSidenav">  
+
       <app-side-nav></app-side-nav>
   
       <div id="layoutSidenav_content">
@@ -18,7 +21,7 @@
     </div>
   </ng-container>
 
-  <ng-container *ngIf="jwtvalid == false">
+  <ng-container *ngIf="login == false">
     <app-login></app-login>
   </ng-container>
 

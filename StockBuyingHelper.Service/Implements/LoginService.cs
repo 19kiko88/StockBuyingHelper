@@ -91,7 +91,8 @@ namespace StockBuyingHelper.Service.Implements
 
             var claims = new List<Claim>
             {
-                new Claim("Name", user.Name),
+                new Claim("Account", user.Account),
+                //new Claim("Name", user.Name),
                 new Claim("Email", user.Email),
                 new Claim("Role", user.Role.ToString()),
             };
