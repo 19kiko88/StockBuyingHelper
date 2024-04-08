@@ -2,7 +2,8 @@ import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 import { JwtInfoService } from '../services/jwt-info.service';
 
-export const authGuard: CanActivateFn = (route, state) => {  
+export const authGuard: CanActivateFn = (route, state) => 
+{  
 
   const _router =  inject(Router);
   const _jwtService =  inject(JwtInfoService);

@@ -58,7 +58,7 @@ export class LoginComponent implements OnInit
         {//沒有錯誤訊息
           this._jwtService.jwt = res.content;
           this._jwtService.setJwtValid(true);
-          this._router.navigate(['/main']);
+          this._router.navigate(['/vtiQuery']);
         }
       },
       error: ex => 
