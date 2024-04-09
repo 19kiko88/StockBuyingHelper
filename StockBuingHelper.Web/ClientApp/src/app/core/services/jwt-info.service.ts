@@ -2,6 +2,7 @@ import { JwtService } from '../http/jwt.service';
 import { Injectable } from '@angular/core';
 import { BaseService } from '../http/base.service';
 import { Subject, lastValueFrom } from 'rxjs';
+import { UserInfo } from '../models/user-info';
 
 @Injectable({
   providedIn: 'root'
@@ -22,7 +23,8 @@ export class JwtInfoService  extends BaseService
   
   get jwt(): string | undefined
   {
-    return localStorage.getItem('jwt') ?? '';
+    this._jwt = localStorage.getItem('jwt') ?? '';
+    return this._jwt;
   }
 
   set jwt(value: string)
@@ -45,6 +47,20 @@ export class JwtInfoService  extends BaseService
     }
 
     return false;
+  }
+
+  get jwtPayload(): UserInfo|undefined
+  {
+    if (this._jwt)
+    {
+      let payload = JSON.parse(window.atob(this._jwt.split('.')[1]));        
+      let userInfo: UserInfo = {account: payload.Account, name: payload.Name, email: payload.Email, role: payload.Role };    
+      return userInfo;
+    }
+    else 
+    {
+      return undefined;
+    }
   }
 
   setJwtValid(valid: boolean)
