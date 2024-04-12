@@ -12,9 +12,9 @@ using System.Threading.Tasks;
 
 namespace StockBuyingHelper.Service.Interfaces
 {
-    public interface ILoginService
+    public interface IAuthService
     {
-        public Task<(string jwtToken, string errorMsg)> JwtLogin(AppSettings.JwtSettings jwtSettings, string account, string password);
+        public Task<(string jwtToken, string errorMsg)> Login(AppSettings.JwtSettings jwtSettings, string account, string password);
 
         /// <summary>
         /// 驗證JWT內容是否被竄改過

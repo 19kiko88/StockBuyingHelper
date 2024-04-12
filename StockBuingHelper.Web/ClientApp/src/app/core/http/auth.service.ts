@@ -8,7 +8,7 @@ import { IResultDto } from '../dtos/response/result-dto';
 @Injectable({
   providedIn: 'root'
 })
-export class LoginService extends BaseService {
+export class AuthService extends BaseService {
 
   constructor(
     private _httpClient: HttpClient    
@@ -16,9 +16,9 @@ export class LoginService extends BaseService {
     super()
    }
 
-  JwtLogin(data: LoginDto)
+  Login(data: LoginDto)
   {
-    const url = `${environment.apiBaseUrl}/Login/Login`;    
+    const url = `${environment.apiBaseUrl}/Auth/Login`;    
     let reqHeaders = new HttpHeaders().set('Content-Type','application/json');    
     let params = JSON.stringify(data);
 

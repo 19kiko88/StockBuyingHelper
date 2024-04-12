@@ -12,11 +12,11 @@ using System.Security.Cryptography;
 
 namespace StockBuyingHelper.Service.Implements
 {
-    public class LoginService: ILoginService
+    public class AuthService: IAuthService
     {
         private readonly IRsaService _rasService;
 
-        public LoginService(IRsaService rasService)
+        public AuthService(IRsaService rasService)
         {
             _rasService = rasService;
         }
@@ -33,7 +33,7 @@ namespace StockBuyingHelper.Service.Implements
         /// <param name="account"></param>
         /// <param name="password"></param>
         /// <returns></returns>
-        public async Task<(string jwtToken, string errorMsg)> JwtLogin(AppSettings.JwtSettings jwtSettings, string account, string password)
+        public async Task<(string jwtToken, string errorMsg)> Login(AppSettings.JwtSettings jwtSettings, string account, string password)
         {
             var errorMsg = string.Empty;
             var user = new UserInfoModel();
@@ -46,18 +46,18 @@ namespace StockBuyingHelper.Service.Implements
                     //Password為加上PasswordSalt後的完整密碼的雜湊值
                     Password = "a4cmsDIckfdXpRvqlrrjfL+qQi3huPGjXT40+ftLAJO685B42T45bN22EEKTdoKW17Hd6+edxpm3z3nno9QIZG0p4hDszQIfxYYpKYbrMgNABfDanymuqRFv12nZCCt0eRMF7qrWX5TejKaHc6RyE1J/bnyu5PQL/inAkMnw0UITgyQxPWadNszO304oHSP197oUTlNCJHSPnfzmQXvEF8Px/w9id/o5W1o7UzmguIlACCiZuryzNfeo7lpUjvcWjNVyUiyoFGXWuKxdfq4OBolfUYAmhnrTY+nA1S0w9H8UEaLv0vAtgrDZYivNXg7DH/2YQtRV4alXzsWyLygHwA==",
                     PasswordSalt = "onLrFc",
-                    Name = "管理員",
+                    Name = "SuperUser",
                     Email = "Admin@test.com",
-                    Role = "1"
+                    Role = "Admin"
                 },
                 new UserInfoModel(){
                     Account = "Test_Account",
                     //Password為加上PasswordSalt後的完整密碼的雜湊值
                     Password = "chBVb0lkT4SLeOLKjPdHU+kTCyut1HbWAk8NBqC/LXW9jm9EUfsByLbf5NdHtLa7/wTtZY4kJUvHRTY7BpDwmm2Vd1DyUNETCXPBPuLx54XBKRkV6J0shUzzVFF3haYE3x2OJL48t/hy7yGiGw8FBUvEiFILzjII0i55uggfWEQyXb71nBBMQLJbgUVsJUOCodD36nEu4QgYg4a9PRp3zAcTmg1NUD+GZdCk2fBMOGXLKFRAvSw96TY8QASnx8lOsTV5k8GlfJC1Zu4T7OJXi2rRJFbRJWJQp0B+2n7DwfH+IxP4wh1+/PvU/wweNCkhyUiNsV3yc9XytSo7p8WGRw==",
                     PasswordSalt = "eeoBIB",
-                    Name = "測試帳號",
+                    Name = "homer_chen",
                     Email = "Test@test.com",
-                    Role = "999"
+                    Role = "User"
                 },
             };
 
@@ -92,9 +92,9 @@ namespace StockBuyingHelper.Service.Implements
             var claims = new List<Claim>
             {
                 new Claim("Account", user.Account),
-                //new Claim("Name", user.Name),
-                new Claim("Email", user.Email),
-                new Claim("Role", user.Role.ToString()),
+                new Claim(ClaimTypes.Name, user.Name),
+                new Claim(ClaimTypes.Email, user.Email),
+                new Claim(ClaimTypes.Role, user.Role.ToString()),
             };
 
             var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Key));

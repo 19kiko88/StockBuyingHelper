@@ -18,13 +18,13 @@ namespace StockBuingHelper.Web.Controllers
 {
     [Route("api/[controller]/[action]")]
     [ApiController]
-    public class LoginController : ControllerBase
+    public class AuthController : ControllerBase
     {
         private readonly AppSettings.JwtSettings _jwt;
-        private readonly ILoginService _loginService;
+        private readonly IAuthService _loginService;
 
-        public LoginController(
-            ILoginService loginService,
+        public AuthController(
+            IAuthService loginService,
             IOptions<AppSettings.JwtSettings> jwt
             )
         {
@@ -37,7 +37,7 @@ namespace StockBuingHelper.Web.Controllers
         public async Task<Result<string>> Login([FromBody] LoginDto data)
         {
             var res = new Result<string>();
-            var jwt = await _loginService.JwtLogin(_jwt, data.Account, data.Password);
+            var jwt = await _loginService.Login(_jwt, data.Account, data.Password);
             
             if (!string.IsNullOrEmpty(jwt.errorMsg))
             {
@@ -60,7 +60,6 @@ namespace StockBuingHelper.Web.Controllers
         /// <param name="jwt">JWT</param>
         /// <param name="secretKey">JWT Key</param>
         /// <returns></returns>
-        [Authorize]
         public async Task<Result<bool>> JwtSignatureVerify(string jwt) 
         {
             var res = new Result<bool>();

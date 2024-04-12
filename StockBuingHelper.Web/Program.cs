@@ -36,7 +36,7 @@ builder.Services.AddAuthentication(options =>
         // 透過這項宣告，就可以從 "NAME" 取值
         NameClaimType = "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier",
         // 透過這項宣告，就可以從 "Role" 取值，並可讓 [Authorize] 判斷角色
-        RoleClaimType = "http://schemas.microsoft.com/ws/2008/06/identity/claims/role",         
+        RoleClaimType = "http://schemas.microsoft.com/ws/2008/06/identity/claims/role",
 
         // 驗證 Issuer (一般都會)
         ValidateIssuer = true,
@@ -55,6 +55,43 @@ builder.Services.AddAuthentication(options =>
         // 應該從 IConfiguration 取得
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration.GetValue<string>("JwtSettings:Key")))
     };
+
+    ///*
+    // *回應Json格式錯誤訊息
+    // *Ref：https://stackoverflow.com/questions/70884906/net-how-to-set-the-the-response-body-when-the-authorization-failed
+    // */
+    //options.Events = new JwtBearerEvents
+    //{
+    //    //    OnAuthenticationFailed = context =>
+    //    //    {
+    //    //        context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+    //    //        context.Response.ContentType = "application/json";
+    //    //        var result = JsonConvert.SerializeObject(new StockBuyingHelper.Models.Models.Result()
+    //    //        {
+    //    //            Success = false,
+    //    //            Message = "Error。401-Unauthorized"
+    //    //            //status = "un-authorized",
+    //    //            //message = "un-authorized"
+    //    //        }); ;
+
+    //    //        return context.Response.WriteAsync(result);
+    //    //    },
+    //    //OnForbidden = context =>
+    //    //{
+    //    //    context.Response.StatusCode = StatusCodes.Status403Forbidden;
+    //    //    context.Response.ContentType = "application/json; charset=utf-8";
+    //    //    var result = JsonConvert.SerializeObject(new StockBuyingHelper.Models.Models.Result()
+    //    //    {
+    //    //        Success = false,
+    //    //        Message = "Error。403-Forbidden"
+    //    //        //status = "un-authorized",
+    //    //        //message = "un-authorized"
+    //    //    });
+
+    //    //    //return Task.CompletedTask;
+    //    //    return context.Response.WriteAsync(result);
+    //    //}
+    //};
 });
 
 builder.Services.AddControllers();
@@ -67,9 +104,7 @@ builder.Services.AddScoped<IStockService, StockService>();
 builder.Services.AddScoped<IVolumeService, VolumeService>();
 builder.Services.AddScoped<IAdminService, AdminService>();
 builder.Services.AddScoped<IAdoNetService, AdoNetService>();
-builder.Services.AddScoped<ILoginService, LoginService>();
-builder.Services.AddScoped<ILoginService, LoginService>();
-builder.Services.AddScoped<ILoginService, LoginService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IRsaService, RsaService>();
 
 
@@ -107,6 +142,7 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
 
 app.UseHttpsRedirection();
 
+app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -118,6 +154,10 @@ if (app.Environment.IsDevelopment())
 
 app.MapControllers();
 app.UseSpaStaticFiles();
+app.UseEndpoints(endpoints =>
+{
+    endpoints.MapControllers();
+});
 
 /*
  *UseSpa() returns index.html from API instead of 404

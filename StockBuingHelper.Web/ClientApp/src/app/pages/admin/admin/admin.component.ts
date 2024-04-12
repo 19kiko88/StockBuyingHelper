@@ -1,3 +1,4 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component } from '@angular/core';
 import { AdminService } from 'src/app/core/http/admin.service';
 import { LoadingService } from 'src/app/shared/components/loading/loading.service';
@@ -30,10 +31,11 @@ export class AdminComponent {
           window.alert(`delete error. ${res.message}`);
         }        
         this._loadingService.setLoading(false);
-      },
-      error: err => 
+      } 
+      ,error: (err: HttpErrorResponse) => 
       {
-        window.alert(`error. ${err}`);
+        debugger;
+        //window.alert(`error. ${err}`);
         this._loadingService.setLoading(false);
       }      
     });

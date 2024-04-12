@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { LoginDto } from 'src/app/core/dtos/request/login-dto';
-import { LoginService } from 'src/app/core/http/login.service';
+import { AuthService } from 'src/app/core/http/auth.service';
 import { JwtInfoService } from 'src/app/core/services/jwt-info.service';
 import * as forge from 'node-forge';
 
@@ -18,7 +18,8 @@ export class LoginComponent implements OnInit
   errorMessage: string = '';  
   account?: string = '';
   password: string = '';
-  publicKey: string = `-----BEGIN PUBLIC KEY-----
+  publicKey: string =
+   `-----BEGIN PUBLIC KEY-----
   MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArc/vhkP0RV7wQE3LbJpS
   m4ony6aE+CcFu6ky3r/IIplOh86yGkk+EUPrufQZ4K0naR6xgnL1Puv6WeiCzZj/
   0JQeaeZUGweO2mx9TazXU4VqT95F+IwUJrhTVmJu/JwfNLjQ+cgo8WadZ2DB2jGs
@@ -29,7 +30,7 @@ export class LoginComponent implements OnInit
   -----END PUBLIC KEY-----`;
 
   constructor(    
-    private _loginService: LoginService,
+    private _authService: AuthService,
     private _router: Router,
     private _jwtService: JwtInfoService
   ){
@@ -47,7 +48,7 @@ export class LoginComponent implements OnInit
 
 
     let data:LoginDto = {Account: this.account, Password: encryptedPassword}
-    this._loginService.JwtLogin(data).subscribe({
+    this._authService.Login(data).subscribe({
       next: res => {
         if (res.message)
         {          

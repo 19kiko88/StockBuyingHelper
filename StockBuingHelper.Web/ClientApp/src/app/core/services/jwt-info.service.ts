@@ -35,10 +35,10 @@ export class JwtInfoService  extends BaseService
 
   get jwtExpired():boolean
   {  
-    if (this._jwt)
+    if (this.jwt)
     {
       //window.atob => base64解碼
-      const payload = JSON.parse(window.atob(this._jwt.split('.')[1]));
+      const payload = JSON.parse(window.atob(this.jwt.split('.')[1]));
       const exp = new Date(Number(payload.exp) * 1000)
       if (new Date() > exp)
       {      
@@ -51,10 +51,10 @@ export class JwtInfoService  extends BaseService
 
   get jwtPayload(): UserInfo|undefined
   {
-    if (this._jwt)
+    if (this.jwt)
     {
-      let payload = JSON.parse(window.atob(this._jwt.split('.')[1]));        
-      let userInfo: UserInfo = {account: payload.Account, name: payload.Name, email: payload.Email, role: payload.Role };    
+      let payload = JSON.parse(window.atob(this.jwt.split('.')[1]));        
+      let userInfo: UserInfo = {account: payload[ClaimTypes.Account], name: payload[ClaimTypes.Name], email: payload[ClaimTypes.Email], role: payload[ClaimTypes.Role] };    
       return userInfo;
     }
     else 
@@ -78,4 +78,11 @@ export class JwtInfoService  extends BaseService
     return res;
   }
 
+}
+
+enum ClaimTypes {
+  Account = 'Account',
+  Name = 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name',
+  Email = 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress',
+  Role = 'http://schemas.microsoft.com/ws/2008/06/identity/claims/role'
 }
