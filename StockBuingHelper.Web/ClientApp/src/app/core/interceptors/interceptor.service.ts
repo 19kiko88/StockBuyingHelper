@@ -1,7 +1,9 @@
+
 import { Injectable } from '@angular/core';
 import { JwtInfoService } from '../services/jwt-info.service';
 import { HttpErrorResponse, HttpEvent, HttpHandler, HttpInterceptor, HttpRequest } from '@angular/common/http';
 import { Observable, catchError, throwError } from 'rxjs';
+import { IResultDto } from '../dtos/response/result-dto';
 
 @Injectable({
   providedIn: 'root'
@@ -33,14 +35,16 @@ export class InterceptorService implements HttpInterceptor
 
           if(err instanceof HttpErrorResponse)
           {
-            switch (err.status) 
+            debugger;
+
+            if(err.error && typeof(err.error) == 'object')
             {
-              case 500:
-                window.alert(`An error occurred：內部程式錯誤，請聯繫維修人員。`);
-                break;
-              default:
-                window.alert(`An error occurred： Error Status [${err.status}] Error`);    
-            }                      
+              window.alert(`[${err.error.Content}] Error - ${err.error.Message}`);                     
+            }
+            else 
+            {
+              window.alert(`[${err.status}] Error - 請聯繫系統管理員.`);       
+            }
           }
 
           return throwError(() => new Error(err.error));
