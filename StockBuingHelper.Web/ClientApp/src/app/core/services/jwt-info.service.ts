@@ -63,6 +63,11 @@ export class JwtInfoService  extends BaseService
     }
   }
 
+  removeJwt()
+  {
+    localStorage.removeItem('jwt');
+  }
+
   setJwtValid(valid: boolean)
   {
     this.emitJwtValid.next(valid);
