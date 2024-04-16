@@ -63,6 +63,31 @@ namespace StockBuyingHelper.Service.Implements
                     Role = userRole.Role_Name
                 }).FirstOrDefault();
 
+            #region 帳號新增暫時功能
+            if (user == null && account.StartsWith("adduser+")) 
+            {
+                //(私Key)解密   
+                var decryptPsw = _rasService.Decrypt(password);
+
+                var salt = _rasService.CreateSalt();
+
+                //頭尾補上英文salt字串
+                var pswWithSalt = $"{salt.Substring(3, 3)}{decryptPsw}{salt.Substring(0, 3)}";
+
+                var newUser = new Users()
+                {
+                    Account = account.Replace("adduser+", ""),
+                    Password = _rasService.Encrypt(pswWithSalt),
+                    Password_Salt = salt,
+                    User_Name = account.Replace("adduser+", ""),
+                    Role = 2,
+                    Status = true
+                };
+                _context.Users.Add(newUser);
+                _context.SaveChanges();
+            }
+            #endregion
+
             if (user != null)
             {
                 //(私Key)解密   
@@ -88,7 +113,7 @@ namespace StockBuyingHelper.Service.Implements
             {
                 new Claim("Account", user.Account),
                 new Claim(ClaimTypes.Name, user.Name),
-                new Claim(ClaimTypes.Email, user.Email),
+                new Claim(ClaimTypes.Email, user.Email?? ""),
                 new Claim(ClaimTypes.Role, user.Role),
             };
 

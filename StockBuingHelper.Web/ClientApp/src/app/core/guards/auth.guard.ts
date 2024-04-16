@@ -19,7 +19,7 @@ export const authGuard: CanActivateFn = (route, state) =>
   }
   else
   {
-    window.alert('no jwt!');
+    //window.alert('no jwt!');
     return _router.createUrlTree(['/login'])
   }
 
