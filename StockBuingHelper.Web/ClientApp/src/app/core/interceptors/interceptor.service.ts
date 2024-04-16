@@ -4,6 +4,7 @@ import { JwtInfoService } from '../services/jwt-info.service';
 import { HttpErrorResponse, HttpEvent, HttpHandler, HttpInterceptor, HttpRequest, HttpResponse } from '@angular/common/http';
 import { Observable, catchError, map, throwError } from 'rxjs';
 import { IResultDto } from '../dtos/response/result-dto';
+import { Router } from '@angular/router';
 
 @Injectable({
   providedIn: 'root'
@@ -13,7 +14,8 @@ export class InterceptorService implements HttpInterceptor
 {
 
   constructor(
-    private _jwtInfoService: JwtInfoService
+    private _jwtInfoService: JwtInfoService,
+    private _router:Router
   ) { }
 
 
@@ -48,6 +50,9 @@ export class InterceptorService implements HttpInterceptor
             else 
             {
               window.alert(`[${err.status}] Error - 請聯繫系統管理員.`);       
+              if(err.status == 401){
+                this._router.navigate(['/login']);
+              }
             }
           }
 
