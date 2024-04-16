@@ -49,14 +49,27 @@ namespace StockBuyingHelper.Service.Implements
                 return (jwtToken: jwtToken, errorMsg: errorMsg);
             }
 
-            var user = _context.Users.Where(c => c.Account.ToLower() == account.ToLower()).FirstOrDefault();
+            //var user = _context.Users.Where(c => c.Account.ToLower() == account.ToLower()).FirstOrDefault();
+            var user = 
+                (from userInfo in _context.Users 
+                join userRole in _context.User_Role on userInfo.Role equals userRole.Role_Id
+                where userInfo.Account.ToLower() == account.ToLower()
+                select new UserInfoModel { 
+                    Account = userInfo.Account,
+                    Password = userInfo.Password,
+                    PasswordSalt = userInfo.Password_Salt,
+                    Name = userInfo.User_Name,
+                    Email = userInfo.Email,
+                    Role = userRole.Role_Name
+                }).FirstOrDefault();
+
             if (user != null)
             {
                 //(私Key)解密   
                 var decryptPsw = _rasService.Decrypt(password);
 
                 //頭尾補上英文salt字串
-                var pswWithSalt = $"{user.Password_Salt.Substring(3, 3)}{decryptPsw}{user.Password_Salt.Substring(0, 3)}";
+                var pswWithSalt = $"{user.PasswordSalt.Substring(3, 3)}{decryptPsw}{user.PasswordSalt.Substring(0, 3)}";
 
                 //密碼比對(RSA加密後的結果每次都不會一樣，所以要解密後再進行比對，不能直接用加密字串進行比對。)
                 var pswCompare = _rasService.Decrypt(user.Password) == pswWithSalt ? true : false;
@@ -74,9 +87,9 @@ namespace StockBuyingHelper.Service.Implements
             var claims = new List<Claim>
             {
                 new Claim("Account", user.Account),
-                new Claim(ClaimTypes.Name, user.User_Name),
+                new Claim(ClaimTypes.Name, user.Name),
                 new Claim(ClaimTypes.Email, user.Email),
-                new Claim(ClaimTypes.Role, user.Role.ToString()),
+                new Claim(ClaimTypes.Role, user.Role),
             };
 
             var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Key));

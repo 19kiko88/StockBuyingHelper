@@ -45,7 +45,7 @@ export class LoginComponent implements OnInit
 
   login()
   {
-    this._loadingService.setLoading(true, 'Loging...');
+    this._loadingService.setLoading(true, 'Logining...');
     var rsa = forge.pki.publicKeyFromPem(this.publicKey);
     var encryptedPassword = window.btoa(rsa.encrypt(this.password));
 
@@ -65,7 +65,7 @@ export class LoginComponent implements OnInit
           this._router.navigate(['/vtiQuery']);
         }
       },
-      error: ex => 
+      error: () => 
       {
         this._loadingService.setLoading(false);
         return;
