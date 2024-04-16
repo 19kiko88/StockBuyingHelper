@@ -22,13 +22,14 @@ public partial class SBHContext : DbContext
         modelBuilder.Entity<User_Role>(entity =>
         {
             entity.HasKey(e => e.Role_Id).HasName("PK__User_Rol__D80AB4BB6926C616");
+
             entity.Property(e => e.Role_Id).ValueGeneratedNever();
             entity.Property(e => e.Role_Name).HasMaxLength(16);
         });
 
         modelBuilder.Entity<Users>(entity =>
         {
-            entity.HasKey(e => e.Account);
+            entity.HasKey(e => new { e.User_Id, e.Account });
 
             entity.Property(e => e.Account).HasMaxLength(64);
             entity.Property(e => e.Email).HasMaxLength(128);
