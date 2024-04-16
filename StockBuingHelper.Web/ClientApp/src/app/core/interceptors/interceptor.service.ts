@@ -1,8 +1,8 @@
 
 import { Injectable } from '@angular/core';
 import { JwtInfoService } from '../services/jwt-info.service';
-import { HttpErrorResponse, HttpEvent, HttpHandler, HttpInterceptor, HttpRequest } from '@angular/common/http';
-import { Observable, catchError, throwError } from 'rxjs';
+import { HttpErrorResponse, HttpEvent, HttpHandler, HttpInterceptor, HttpRequest, HttpResponse } from '@angular/common/http';
+import { Observable, catchError, map, throwError } from 'rxjs';
 import { IResultDto } from '../dtos/response/result-dto';
 
 @Injectable({
@@ -31,12 +31,16 @@ export class InterceptorService implements HttpInterceptor
     //return next.handle(req);
 
     return next.handle(req).pipe(  
+      // map(event => {
+      //   if (event instanceof HttpResponse){
+      //   }
+        
+      //   return event;
+      // }),
       catchError((err: HttpErrorResponse) => {
 
           if(err instanceof HttpErrorResponse)
           {
-            debugger;
-
             if(err.error && typeof(err.error) == 'object')
             {
               window.alert(`[${err.error.Content}] Error - ${err.error.Message}`);                     
@@ -47,7 +51,7 @@ export class InterceptorService implements HttpInterceptor
             }
           }
 
-          return throwError(() => new Error(err.error));
+          return throwError(() => new Error(/*err.error*/));
         }
       )
     )

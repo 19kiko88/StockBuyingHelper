@@ -3,7 +3,7 @@ import { CanActivateFn, Router } from '@angular/router';
 import { JwtInfoService } from '../services/jwt-info.service';
 
 export const authGuard: CanActivateFn = (route, state) => 
-{  
+{
 
   const _router =  inject(Router);
   const _jwtService =  inject(JwtInfoService);
@@ -13,6 +13,7 @@ export const authGuard: CanActivateFn = (route, state) =>
     if (_jwtService.jwtExpired)
     {
       window.alert('jwt expired!');
+      localStorage.removeItem('jwt');
       return _router.createUrlTree(['/login'])
     }
   }

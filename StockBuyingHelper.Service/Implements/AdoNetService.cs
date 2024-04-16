@@ -20,7 +20,7 @@ namespace StockBuyingHelper.Service.Implements
             _conn = conn.Value;
         }
 
-        public async Task<(int modifyRowCount, string errorMsg)> CreateCommand(string sqlCommand)
+        public async Task<(int modifyRowCount, string errorMsg)> ExecuteNonQuery(string sqlCommand)
         {
             var res = 0;
             var errorMsg = string.Empty;

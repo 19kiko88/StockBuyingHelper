@@ -1,5 +1,4 @@
-﻿using AngleSharp;
-using Microsoft.IdentityModel.Tokens;
+﻿using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -7,18 +6,24 @@ using System.Text;
 using StockBuyingHelper.Service.Models;
 using StockBuyingHelper.Models;
 using StockBuyingHelper.Service.Interfaces;
-using Microsoft.Extensions.Options;
 using System.Security.Cryptography;
+using SBH.Repositories;
+using SBH.Repositories.Models;
 
 namespace StockBuyingHelper.Service.Implements
 {
     public class AuthService: IAuthService
     {
         private readonly IRsaService _rasService;
+        private readonly SBHContext _context;
 
-        public AuthService(IRsaService rasService)
+        public AuthService(
+            IRsaService rasService,
+            SBHContext context
+        )
         {
             _rasService = rasService;
+            _context = context;
         }
 
 
@@ -35,31 +40,8 @@ namespace StockBuyingHelper.Service.Implements
         /// <returns></returns>
         public async Task<(string jwtToken, string errorMsg)> Login(AppSettings.JwtSettings jwtSettings, string account, string password)
         {
-            var errorMsg = string.Empty;
-            var user = new UserInfoModel();
+            var errorMsg = string.Empty;            
             var jwtToken = string.Empty;
-            //模擬DB資料
-            var mockDbUser = new List<UserInfoModel>()
-            {
-                new UserInfoModel(){ 
-                    Account = "Admin",
-                    //Password為加上PasswordSalt後的完整密碼的雜湊值
-                    Password = "a4cmsDIckfdXpRvqlrrjfL+qQi3huPGjXT40+ftLAJO685B42T45bN22EEKTdoKW17Hd6+edxpm3z3nno9QIZG0p4hDszQIfxYYpKYbrMgNABfDanymuqRFv12nZCCt0eRMF7qrWX5TejKaHc6RyE1J/bnyu5PQL/inAkMnw0UITgyQxPWadNszO304oHSP197oUTlNCJHSPnfzmQXvEF8Px/w9id/o5W1o7UzmguIlACCiZuryzNfeo7lpUjvcWjNVyUiyoFGXWuKxdfq4OBolfUYAmhnrTY+nA1S0w9H8UEaLv0vAtgrDZYivNXg7DH/2YQtRV4alXzsWyLygHwA==",
-                    PasswordSalt = "onLrFc",
-                    Name = "SuperUser",
-                    Email = "Admin@test.com",
-                    Role = "Admin"
-                },
-                new UserInfoModel(){
-                    Account = "Test_Account",
-                    //Password為加上PasswordSalt後的完整密碼的雜湊值
-                    Password = "chBVb0lkT4SLeOLKjPdHU+kTCyut1HbWAk8NBqC/LXW9jm9EUfsByLbf5NdHtLa7/wTtZY4kJUvHRTY7BpDwmm2Vd1DyUNETCXPBPuLx54XBKRkV6J0shUzzVFF3haYE3x2OJL48t/hy7yGiGw8FBUvEiFILzjII0i55uggfWEQyXb71nBBMQLJbgUVsJUOCodD36nEu4QgYg4a9PRp3zAcTmg1NUD+GZdCk2fBMOGXLKFRAvSw96TY8QASnx8lOsTV5k8GlfJC1Zu4T7OJXi2rRJFbRJWJQp0B+2n7DwfH+IxP4wh1+/PvU/wweNCkhyUiNsV3yc9XytSo7p8WGRw==",
-                    PasswordSalt = "eeoBIB",
-                    Name = "homer_chen",
-                    Email = "Test@test.com",
-                    Role = "User"
-                },
-            };
 
             if (string.IsNullOrEmpty(account))
             {
@@ -67,16 +49,16 @@ namespace StockBuyingHelper.Service.Implements
                 return (jwtToken: jwtToken, errorMsg: errorMsg);
             }
 
-            user = mockDbUser.Where(c => c.Account.ToLower() == account.ToLower()).FirstOrDefault();
+            var user = _context.Users.Where(c => c.Account.ToLower() == account.ToLower()).FirstOrDefault();
             if (user != null)
             {
                 //(私Key)解密   
                 var decryptPsw = _rasService.Decrypt(password);
 
                 //頭尾補上英文salt字串
-                var pswWithSalt = $"{user.PasswordSalt.Substring(3, 3)}{decryptPsw}{user.PasswordSalt.Substring(0, 3)}";
+                var pswWithSalt = $"{user.Password_Salt.Substring(3, 3)}{decryptPsw}{user.Password_Salt.Substring(0, 3)}";
 
-                //密碼比對(RSA加密後的結果每次都不會一樣，所以要解密後再進行比對。)
+                //密碼比對(RSA加密後的結果每次都不會一樣，所以要解密後再進行比對，不能直接用加密字串進行比對。)
                 var pswCompare = _rasService.Decrypt(user.Password) == pswWithSalt ? true : false;
 
                 if (pswCompare == false)
@@ -92,7 +74,7 @@ namespace StockBuyingHelper.Service.Implements
             var claims = new List<Claim>
             {
                 new Claim("Account", user.Account),
-                new Claim(ClaimTypes.Name, user.Name),
+                new Claim(ClaimTypes.Name, user.User_Name),
                 new Claim(ClaimTypes.Email, user.Email),
                 new Claim(ClaimTypes.Role, user.Role.ToString()),
             };

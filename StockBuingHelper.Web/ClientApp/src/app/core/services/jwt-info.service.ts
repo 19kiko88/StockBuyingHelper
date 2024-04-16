@@ -21,7 +21,7 @@ export class JwtInfoService  extends BaseService
     super();    
   }
   
-  get jwt(): string | undefined
+  get jwt(): string
   {
     this._jwt = localStorage.getItem('jwt') ?? '';
     return this._jwt;

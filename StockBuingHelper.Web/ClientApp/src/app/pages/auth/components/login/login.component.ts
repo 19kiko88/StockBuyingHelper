@@ -4,6 +4,7 @@ import { LoginDto } from 'src/app/core/dtos/request/login-dto';
 import { AuthService } from 'src/app/core/http/auth.service';
 import { JwtInfoService } from 'src/app/core/services/jwt-info.service';
 import * as forge from 'node-forge';
+import { LoadingService } from 'src/app/shared/components/loading/loading.service';
 
 @Component({
   selector: 'app-login',
@@ -32,7 +33,8 @@ export class LoginComponent implements OnInit
   constructor(    
     private _authService: AuthService,
     private _router: Router,
-    private _jwtService: JwtInfoService
+    private _jwtService: JwtInfoService,
+    private _loadingService: LoadingService
   ){
 
   }
@@ -43,6 +45,7 @@ export class LoginComponent implements OnInit
 
   login()
   {
+    this._loadingService.setLoading(true, 'Loging...');
     var rsa = forge.pki.publicKeyFromPem(this.publicKey);
     var encryptedPassword = window.btoa(rsa.encrypt(this.password));
 
@@ -50,6 +53,7 @@ export class LoginComponent implements OnInit
     let data:LoginDto = {Account: this.account, Password: encryptedPassword}
     this._authService.Login(data).subscribe({
       next: res => {
+        this._loadingService.setLoading(false);
         if (res.message)
         {          
           this.errorMessage = res.message;
@@ -63,7 +67,7 @@ export class LoginComponent implements OnInit
       },
       error: ex => 
       {
-        alert(ex.message);
+        this._loadingService.setLoading(false);
         return;
       }
     })

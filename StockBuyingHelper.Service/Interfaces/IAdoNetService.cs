@@ -8,6 +8,6 @@ namespace StockBuyingHelper.Service.Interfaces
 {
     public interface IAdoNetService
     {
-        public Task<(int modifyRowCount, string errorMsg)> CreateCommand(string sqlCommand);
+        public Task<(int modifyRowCount, string errorMsg)> ExecuteNonQuery(string sqlCommand);
     }
 }

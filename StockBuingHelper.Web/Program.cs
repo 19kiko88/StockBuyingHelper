@@ -7,6 +7,8 @@ using StockBuyingHelper.Models;
 using StockBuyingHelper.Service.Implements;
 using StockBuyingHelper.Service.Interfaces;
 using System.Text;
+using SBH.Repositories.Models;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 var logger = new LoggerConfiguration()
@@ -16,6 +18,8 @@ var logger = new LoggerConfiguration()
 var _configuration = builder.Configuration;
 var secret = _configuration.GetValue<string>("JwtSettings:Secret");
 var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
+
+builder.Services.AddDbContext<SBHContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("SBHConnection")));
 
 builder.Logging.ClearProviders();
 builder.Logging.AddSerilog(logger);
@@ -67,35 +71,35 @@ builder.Services.AddAuthentication(options =>
      *Ref：https://www.cnblogs.com/laozhang-is-phi/p/11833800.html
      *
      */
-    options.Events = new JwtBearerEvents
-    {
-        OnAuthenticationFailed = context =>
-        {
-            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-            context.Response.ContentType = "application/json";
-            var result = JsonConvert.SerializeObject(new StockBuyingHelper.Models.Models.Result<int>()
-            {
-                Success = false,
-                Message = "未取得JWT授權.",
-                Content = 401,
-            }); ;
+    //options.Events = new JwtBearerEvents
+    //{
+    //    OnAuthenticationFailed = context =>
+    //    {
+    //        context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+    //        context.Response.ContentType = "application/json";
+    //        var result = JsonConvert.SerializeObject(new StockBuyingHelper.Models.Models.Result<int>()
+    //        {
+    //            Success = false,
+    //            Message = "未取得JWT授權.",
+    //            Content = 401,
+    //        }); ;
 
-            return context.Response.WriteAsync(result);
-        },
-        OnForbidden = context =>
-        {
-            context.Response.StatusCode = StatusCodes.Status403Forbidden;
-            context.Response.ContentType = "application/json; charset=utf-8";
-            var result = JsonConvert.SerializeObject(new StockBuyingHelper.Models.Models.Result<int>()
-            {
-                Success = false,
-                Message = "權限不足.",
-                Content = 403,
-            });
+    //        return context.Response.WriteAsync(result);
+    //    },
+    //    OnForbidden = context =>
+    //    {
+    //        context.Response.StatusCode = StatusCodes.Status403Forbidden;
+    //        context.Response.ContentType = "application/json; charset=utf-8";
+    //        var result = JsonConvert.SerializeObject(new StockBuyingHelper.Models.Models.Result<int>()
+    //        {
+    //            Success = false,
+    //            Message = "權限不足.",
+    //            Content = 403,
+    //        });
 
-            return context.Response.WriteAsync(result);
-        }
-    };
+    //        return context.Response.WriteAsync(result);
+    //    }
+    //};
 });
 
 builder.Services.AddControllers();

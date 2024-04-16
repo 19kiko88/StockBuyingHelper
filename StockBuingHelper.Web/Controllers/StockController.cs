@@ -37,7 +37,7 @@ namespace StockBuingHelper.Web.Controllers
 
         [HttpPost]
         public async Task<Result<List<BuyingResultDto>>> GetVtiData([FromBody] ResGetVtiDataDto reqData)
-        {
+        {          
             var sw = new Stopwatch();
             var res = new Result<List<BuyingResultDto>>();
             var yahooApiRequestCount = 0;
