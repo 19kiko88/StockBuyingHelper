@@ -1,9 +1,10 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { LoginDto } from 'src/app/core/dtos/request/login-dto';
-import { LoginService } from 'src/app/core/http/login.service';
+import { AuthService } from 'src/app/core/http/auth.service';
 import { JwtInfoService } from 'src/app/core/services/jwt-info.service';
 import * as forge from 'node-forge';
+import { LoadingService } from 'src/app/shared/components/loading/loading.service';
 
 @Component({
   selector: 'app-login',
@@ -18,7 +19,8 @@ export class LoginComponent implements OnInit
   errorMessage: string = '';  
   account?: string = '';
   password: string = '';
-  publicKey: string = `-----BEGIN PUBLIC KEY-----
+  publicKey: string =
+   `-----BEGIN PUBLIC KEY-----
   MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArc/vhkP0RV7wQE3LbJpS
   m4ony6aE+CcFu6ky3r/IIplOh86yGkk+EUPrufQZ4K0naR6xgnL1Puv6WeiCzZj/
   0JQeaeZUGweO2mx9TazXU4VqT95F+IwUJrhTVmJu/JwfNLjQ+cgo8WadZ2DB2jGs
@@ -29,9 +31,10 @@ export class LoginComponent implements OnInit
   -----END PUBLIC KEY-----`;
 
   constructor(    
-    private _loginService: LoginService,
+    private _authService: AuthService,
     private _router: Router,
-    private _jwtService: JwtInfoService
+    private _jwtService: JwtInfoService,
+    private _loadingService: LoadingService
   ){
 
   }
@@ -42,13 +45,15 @@ export class LoginComponent implements OnInit
 
   login()
   {
+    this._loadingService.setLoading(true, 'Loging...');
     var rsa = forge.pki.publicKeyFromPem(this.publicKey);
     var encryptedPassword = window.btoa(rsa.encrypt(this.password));
 
 
     let data:LoginDto = {Account: this.account, Password: encryptedPassword}
-    this._loginService.JwtLogin(data).subscribe({
+    this._authService.Login(data).subscribe({
       next: res => {
+        this._loadingService.setLoading(false);
         if (res.message)
         {          
           this.errorMessage = res.message;
@@ -57,13 +62,12 @@ export class LoginComponent implements OnInit
         else
         {//沒有錯誤訊息
           this._jwtService.jwt = res.content;
-          this._jwtService.setJwtValid(true);
           this._router.navigate(['/vtiQuery']);
         }
       },
       error: ex => 
       {
-        alert(ex.message);
+        this._loadingService.setLoading(false);
         return;
       }
     })

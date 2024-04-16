@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component } from '@angular/core';
 import { JwtInfoService } from './core/services/jwt-info.service';
 import { UserInfo } from './core/models/user-info';
 import { NavigationStart, Router } from '@angular/router';
@@ -9,19 +9,21 @@ import { NavigationStart, Router } from '@angular/router';
   styleUrls: ['./app.component.css']
 })
 
-export class AppComponent implements OnInit {
+export class AppComponent 
+{
   title = '買股小幫手';
   isLoader: boolean = false;
   loadingMsg: string|undefined = '';
   userInfo?: UserInfo;
   login: boolean = false;
 
-  constructor(  
+  constructor
+  (  
     private _route: Router,  
     private _jwtService: JwtInfoService,
   ) 
   {
-    _route.events.forEach((event) => 
+    this._route.events.forEach((event) => 
       {
       if (event instanceof NavigationStart) 
         {
@@ -31,43 +33,12 @@ export class AppComponent implements OnInit {
         } 
         else 
         {
-          this.login = true;   
-          if(_jwtService.jwt)
-          {
-            let payload = JSON.parse(window.atob(_jwtService.jwt.split('.')[1]));        
-            this.userInfo = {account: payload.Account, name: payload.Name, email: payload.Email, role: payload.Role };    
-          }
+          this.login = true;  
+          this.userInfo = this._jwtService.jwtPayload;
         }
       }
     });
   }
 
-
-  ngOnInit(): void 
-  {
-    // if(this._jwtService.jwt && !this._jwtService.jwtExpired)
-    // {
-    //   this._jwtService.jwtSignatureVerify().then(res => {
-    //     alert(res);
-    //   })
-    // }
-
-    // this._jwtService.jwtValid$.subscribe(res => {
-    //   this.jwtvalid = res;
-
-    //   if (res && this._jwtService.jwt) 
-    //   {
-    //     let payload = JSON.parse(window.atob(this._jwtService.jwt.split('.')[1]));
-        
-    //     this.userInfo = {
-    //       account: payload.Account,
-    //       name: payload.Name,
-    //       email: payload.Email,
-    //       role: payload.Role
-    //     };        
-    //   }
-      
-    // })
-  }
   
 }

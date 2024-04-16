@@ -1,6 +1,6 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
-import { LoginComponent } from './pages/login/components/login/login.component';
+import { LoginComponent } from './pages/auth/components/login/login.component';
 import { authGuard } from './core/guards/auth.guard';
 import { VtiQueryComponent } from './pages/functions/components/vti-query/vti-query.component';
 

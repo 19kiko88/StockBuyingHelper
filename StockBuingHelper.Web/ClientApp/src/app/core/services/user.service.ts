@@ -13,17 +13,10 @@ export class UserService {
 
   get UserInfo(): UserInfo | undefined
   {
-    if (this._user)
-    {
-      return this._user;
-    }
-    else 
-    {
-      return undefined;
-    }
+    return this._user
   }
 
-  set UserInfo(userInfo: UserInfo)
+  set UserInfo(userInfo: UserInfo | undefined)
   {
     this._user = userInfo;
   }

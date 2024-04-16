@@ -2,6 +2,7 @@ import { JwtService } from '../http/jwt.service';
 import { Injectable } from '@angular/core';
 import { BaseService } from '../http/base.service';
 import { Subject, lastValueFrom } from 'rxjs';
+import { UserInfo } from '../models/user-info';
 
 @Injectable({
   providedIn: 'root'
@@ -20,9 +21,10 @@ export class JwtInfoService  extends BaseService
     super();    
   }
   
-  get jwt(): string | undefined
+  get jwt(): string
   {
-    return localStorage.getItem('jwt') ?? '';
+    this._jwt = localStorage.getItem('jwt') ?? '';
+    return this._jwt;
   }
 
   set jwt(value: string)
@@ -33,10 +35,10 @@ export class JwtInfoService  extends BaseService
 
   get jwtExpired():boolean
   {  
-    if (this._jwt)
+    if (this.jwt)
     {
       //window.atob => base64解碼
-      const payload = JSON.parse(window.atob(this._jwt.split('.')[1]));
+      const payload = JSON.parse(window.atob(this.jwt.split('.')[1]));
       const exp = new Date(Number(payload.exp) * 1000)
       if (new Date() > exp)
       {      
@@ -45,6 +47,20 @@ export class JwtInfoService  extends BaseService
     }
 
     return false;
+  }
+
+  get jwtPayload(): UserInfo|undefined
+  {
+    if (this.jwt)
+    {
+      let payload = JSON.parse(window.atob(this.jwt.split('.')[1]));        
+      let userInfo: UserInfo = {account: payload[ClaimTypes.Account], name: payload[ClaimTypes.Name], email: payload[ClaimTypes.Email], role: payload[ClaimTypes.Role] };    
+      return userInfo;
+    }
+    else 
+    {
+      return undefined;
+    }
   }
 
   setJwtValid(valid: boolean)
@@ -62,4 +78,11 @@ export class JwtInfoService  extends BaseService
     return res;
   }
 
+}
+
+enum ClaimTypes {
+  Account = 'Account',
+  Name = 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name',
+  Email = 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress',
+  Role = 'http://schemas.microsoft.com/ws/2008/06/identity/claims/role'
 }

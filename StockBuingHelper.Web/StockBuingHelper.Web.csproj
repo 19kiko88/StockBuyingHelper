@@ -30,10 +30,15 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="7.0.17" />
     <PackageReference Include="Microsoft.AspNetCore.SpaServices.Extensions" Version="7.0.15" />
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="5.2.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="7.0.18" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="7.0.18" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="Serilog.AspNetCore" Version="8.0.1" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\SBH.Repositories\SBH.Repositories.csproj" />
     <ProjectReference Include="..\StockBuyingHelper.Models\StockBuyingHelper.Models.csproj" />
     <ProjectReference Include="..\StockBuyingHelper.Service\StockBuyingHelper.Service.csproj" />
   </ItemGroup>
@@ -45,6 +50,10 @@
     <None Update="Keys\sbh.pub.pem">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="NewFolder\" />
   </ItemGroup>
 
 </Project>

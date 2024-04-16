@@ -1,11 +1,14 @@
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+ï»¿using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.IdentityModel.Tokens;
+using Newtonsoft.Json;
 using Serilog;
 using StockBuyingHelper.Models;
 using StockBuyingHelper.Service.Implements;
 using StockBuyingHelper.Service.Interfaces;
 using System.Text;
+using SBH.Repositories.Models;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 var logger = new LoggerConfiguration()
@@ -14,6 +17,9 @@ var logger = new LoggerConfiguration()
     .CreateLogger();
 var _configuration = builder.Configuration;
 var secret = _configuration.GetValue<string>("JwtSettings:Secret");
+var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
+
+builder.Services.AddDbContext<SBHContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("SBHConnection")));
 
 builder.Logging.ClearProviders();
 builder.Logging.AddSerilog(logger);
@@ -23,38 +29,77 @@ builder.Logging.AddSerilog(logger);
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme; // nameof(ApiResponseHandler);//
+    options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;// nameof(ApiResponseHandler); 
 })
 .AddJwtBearer(options =>
 {
-    // ·íÅçÃÒ¥¢±Ñ®É¡A¦^À³¼ĞÀY·|¥]§t WWW-Authenticate ¼ĞÀY¡A³o¸Ì·|Åã¥Ü¥¢±Ñªº¸Ô²Ó¿ù»~­ì¦]
-    options.IncludeErrorDetails = true; // ¹w³]­È¬° true¡A¦³®É·|¯S§OÃö³¬
+    // ç•¶é©—è­‰å¤±æ•—æ™‚ï¼Œå›æ‡‰æ¨™é ­æœƒåŒ…å« WWW-Authenticate æ¨™é ­ï¼Œé€™è£¡æœƒé¡¯ç¤ºå¤±æ•—çš„è©³ç´°éŒ¯èª¤åŸå› 
+    options.IncludeErrorDetails = true; // é è¨­å€¼ç‚º trueï¼Œæœ‰æ™‚æœƒç‰¹åˆ¥é—œé–‰
 
     options.TokenValidationParameters = new TokenValidationParameters
     {
-        // ³z¹L³o¶µ«Å§i¡A´N¥i¥H±q "NAME" ¨ú­È
+        // é€éé€™é …å®£å‘Šï¼Œå°±å¯ä»¥å¾ "NAME" å–å€¼
         NameClaimType = "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier",
-        // ³z¹L³o¶µ«Å§i¡A´N¥i¥H±q "Role" ¨ú­È¡A¨Ã¥iÅı [Authorize] §PÂ_¨¤¦â
-        RoleClaimType = "http://schemas.microsoft.com/ws/2008/06/identity/claims/role",         
+        // é€éé€™é …å®£å‘Šï¼Œå°±å¯ä»¥å¾ "Role" å–å€¼ï¼Œä¸¦å¯è®“ [Authorize] åˆ¤æ–·è§’è‰²
+        RoleClaimType = "http://schemas.microsoft.com/ws/2008/06/identity/claims/role",
 
-        // ÅçÃÒ Issuer (¤@¯ë³£·|)
+        // é©—è­‰ Issuer (ä¸€èˆ¬éƒ½æœƒ)
         ValidateIssuer = true,
         ValidIssuer = _configuration.GetValue<string>("JwtSettings:ValidIssuer"),
 
-        // ÅçÃÒ Audience (³q±`¤£¤Ó»İ­n)
+        // é©—è­‰ Audience (é€šå¸¸ä¸å¤ªéœ€è¦)
         ValidateAudience = false,
         //ValidAudience = = _configuration.GetValue<string>("JwtSettings:ValidAudience"),
 
-        // ÅçÃÒ Token ªº¦³®Ä´Á¶¡ (¤@¯ë³£·|)
+        // é©—è­‰ Token çš„æœ‰æ•ˆæœŸé–“ (ä¸€èˆ¬éƒ½æœƒ)
         ValidateLifetime = true,
 
-        // ¦pªG Token ¤¤¥]§t key ¤~»İ­nÅçÃÒ¡A¤@¯ë³£¥u¦³Ã±³¹¦Ó¤w
+        // å¦‚æœ Token ä¸­åŒ…å« key æ‰éœ€è¦é©—è­‰ï¼Œä¸€èˆ¬éƒ½åªæœ‰ç°½ç« è€Œå·²
         ValidateIssuerSigningKey = false,
 
-        // À³¸Ó±q IConfiguration ¨ú±o
+        // æ‡‰è©²å¾ IConfiguration å–å¾—
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration.GetValue<string>("JwtSettings:Key")))
     };
+
+    /*
+     *å›æ‡‰Jsonæ ¼å¼éŒ¯èª¤è¨Šæ¯
+     *Refï¼šhttps://stackoverflow.com/questions/70884906/net-how-to-set-the-the-response-body-when-the-authorization-failed
+     *
+     *è‡ªè¨‚HttpErrorResponseçš„å›æ‡‰æ ¼å¼
+     *ä»å£¹å¼€å§‹ã€NetCore3.0ã€‘ 46 â•‘ æˆæƒè®¤è¯ï¼šè‡ªå®šä¹‰è¿”å›æ ¼å¼
+     *Refï¼šhttps://www.cnblogs.com/laozhang-is-phi/p/11833800.html
+     *
+     */
+    //options.Events = new JwtBearerEvents
+    //{
+    //    OnAuthenticationFailed = context =>
+    //    {
+    //        context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+    //        context.Response.ContentType = "application/json";
+    //        var result = JsonConvert.SerializeObject(new StockBuyingHelper.Models.Models.Result<int>()
+    //        {
+    //            Success = false,
+    //            Message = "æœªå–å¾—JWTæˆæ¬Š.",
+    //            Content = 401,
+    //        }); ;
+
+    //        return context.Response.WriteAsync(result);
+    //    },
+    //    OnForbidden = context =>
+    //    {
+    //        context.Response.StatusCode = StatusCodes.Status403Forbidden;
+    //        context.Response.ContentType = "application/json; charset=utf-8";
+    //        var result = JsonConvert.SerializeObject(new StockBuyingHelper.Models.Models.Result<int>()
+    //        {
+    //            Success = false,
+    //            Message = "æ¬Šé™ä¸è¶³.",
+    //            Content = 403,
+    //        });
+
+    //        return context.Response.WriteAsync(result);
+    //    }
+    //};
 });
 
 builder.Services.AddControllers();
@@ -67,9 +112,7 @@ builder.Services.AddScoped<IStockService, StockService>();
 builder.Services.AddScoped<IVolumeService, VolumeService>();
 builder.Services.AddScoped<IAdminService, AdminService>();
 builder.Services.AddScoped<IAdoNetService, AdoNetService>();
-builder.Services.AddScoped<ILoginService, LoginService>();
-builder.Services.AddScoped<ILoginService, LoginService>();
-builder.Services.AddScoped<ILoginService, LoginService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IRsaService, RsaService>();
 
 
@@ -84,7 +127,8 @@ if (builder.Environment.IsDevelopment())
 {
     builder.Services.AddCors(options =>
     {
-        options.AddPolicy("allowCors",
+        options.AddPolicy(
+        name:MyAllowSpecificOrigins,
         builder =>
         {
             builder.WithOrigins("http://localhost:4200")
@@ -107,23 +151,29 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
 
 app.UseHttpsRedirection();
 
+app.UseRouting();
+if (app.Environment.IsDevelopment())
+{
+    //å¥—ç”¨CORS
+    app.UseCors(MyAllowSpecificOrigins);
+}
 app.UseAuthentication();
 app.UseAuthorization();
 
-if (app.Environment.IsDevelopment())
+app.UseEndpoints(endpoints =>
 {
-    //®M¥ÎCORS
-    app.UseCors("allowCors");
-}
+    endpoints.MapControllers();
+});
 
 app.MapControllers();
 app.UseSpaStaticFiles();
 
+
 /*
  *UseSpa() returns index.html from API instead of 404
- *ref¡Ghttps://stackoverflow.com/questions/67625133/usespa-returns-index-html-from-api-instead-of-404
+ *refï¼šhttps://stackoverflow.com/questions/67625133/usespa-returns-index-html-from-api-instead-of-404
  *
- *ref¡Ghttps://www.cnblogs.com/dudu/p/16686077.html
+ *refï¼šhttps://www.cnblogs.com/dudu/p/16686077.html
  */
 app.MapWhen(x => !x.Request.Path.Value.StartsWith("/api"), builder =>
 {

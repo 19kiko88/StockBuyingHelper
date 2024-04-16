@@ -1,24 +1,23 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using StockBuingHelper.Web.Dtos.Request;
 using StockBuingHelper.Web.Dtos.Response;
 using StockBuyingHelper.Models;
 using StockBuyingHelper.Models.Models;
 using StockBuyingHelper.Service.Interfaces;
-using StockBuyingHelper.Service.Models;
+using System.Data;
 using System.Diagnostics;
-using System.Text;
 
 namespace StockBuingHelper.Web.Controllers
 {
-
+    [Authorize]
     [ApiController]
     [Route("api/[controller]/[action]")]
     public class StockController : ControllerBase
     {
         private readonly IStockService _stockService;
         private readonly IVolumeService _volumeService;
-        private readonly IAdminService _adminService;
         private readonly AppSettings.CustomizeSettings _appCustSettings;
         private readonly ILogger<StockController> _logger;
 
@@ -32,14 +31,13 @@ namespace StockBuingHelper.Web.Controllers
         {
             _stockService = stockService;
             _volumeService = volumeService;
-            _adminService = adminService;
             _appCustSettings = appCustSettings.Value;
             _logger = logger;
         }
 
         [HttpPost]
         public async Task<Result<List<BuyingResultDto>>> GetVtiData([FromBody] ResGetVtiDataDto reqData)
-        {
+        {          
             var sw = new Stopwatch();
             var res = new Result<List<BuyingResultDto>>();
             var yahooApiRequestCount = 0;
@@ -187,34 +185,6 @@ namespace StockBuingHelper.Web.Controllers
             sw.Stop();
             res.Message += $"Run time：{Math.Round(Convert.ToDouble(sw.ElapsedMilliseconds / 1000), 2)}(s)。YahooApiReqestCount：{yahooApiRequestCount}。";
             res.Success = true;
-
-            return res;
-        }
-
-        /// <summary>
-        /// 清除db.[Volume_Detail]。重新抓取從Yahoo API抓最新成交資料
-        /// </summary>
-        /// <returns></returns>
-        [HttpDelete]
-        public async Task<Result<int>> DeleteVolumeDetail()
-        {
-            var res = new Result<int>();
-            try
-            {
-                var data = await _adminService.DeleteVolumeDetail();
-                if (string.IsNullOrEmpty(data.errorMsg))
-                {
-                    res.Success = true;
-                }                
-                else 
-                { 
-                    res.Message = data.errorMsg;
-                }
-            }
-            catch (Exception ex)
-            {
-                res.Message = ex.Message;
-            }
 
             return res;
         }

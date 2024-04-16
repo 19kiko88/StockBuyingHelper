@@ -31,6 +31,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\SBH.Repositories\SBH.Repositories.csproj" />
     <ProjectReference Include="..\StockBuyingHelper.Models\StockBuyingHelper.Models.csproj" />
   </ItemGroup>
 

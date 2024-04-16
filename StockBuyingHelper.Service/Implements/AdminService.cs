@@ -19,7 +19,7 @@ namespace StockBuyingHelper.Service.Implements
         public async Task<(int cnt, string errorMsg)> DeleteVolumeDetail()
         {            
             var sqlCommand = @"truncate table Volume_Detail";
-            var res = await _adoNetService.CreateCommand(sqlCommand);
+            var res = await _adoNetService.ExecuteNonQuery(sqlCommand);
             return res;
         }
     }

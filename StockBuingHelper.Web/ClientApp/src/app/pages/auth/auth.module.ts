@@ -16,4 +16,4 @@ import { SharedModule } from 'primeng/api';
   ],
   exports:[LoginComponent]
 })
-export class LoginModule { }
+export class AuthModule { }
