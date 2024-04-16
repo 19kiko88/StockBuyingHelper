@@ -8,6 +8,7 @@ using StockBuyingHelper.Models.Models;
 using StockBuyingHelper.Service.Interfaces;
 using System.Data;
 using System.Diagnostics;
+using System.Security.Claims;
 
 namespace StockBuingHelper.Web.Controllers
 {
@@ -41,6 +42,7 @@ namespace StockBuingHelper.Web.Controllers
             var sw = new Stopwatch();
             var res = new Result<List<BuyingResultDto>>();
             var yahooApiRequestCount = 0;
+            var role = User.Claims.Where(C => C.Type == ClaimTypes.Role).FirstOrDefault()?.Value;
 
             try
             {
@@ -74,18 +76,15 @@ namespace StockBuingHelper.Web.Controllers
                 else if (!string.IsNullOrEmpty(reqData.specificStockId))
                 {
                     _stockService.IgnoreFilter = true;
-                    if (reqData.specificStockId.IndexOf(',') > 0)
-                    {
+                    if (role == "Admin" && reqData.specificStockId.IndexOf(',') > 0)
+                    {//Admin才可以手動查詢多筆資料
                         filterIds = reqData.specificStockId.Split(',').ToList();
                     }
                     else
                     {
                         filterIds = new List<string> { reqData.specificStockId };
                     }
-                }
-                    
-
-
+                }                   
 
                 /*
                  * 選股條件ref：

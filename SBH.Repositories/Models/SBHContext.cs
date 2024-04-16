@@ -29,9 +29,11 @@ public partial class SBHContext : DbContext
 
         modelBuilder.Entity<Users>(entity =>
         {
-            entity.HasKey(e => new { e.User_Id, e.Account });
+            entity.HasKey(e => e.User_Id).HasName("PK_Users_1");
 
-            entity.Property(e => e.Account).HasMaxLength(64);
+            entity.Property(e => e.Account)
+                .IsRequired()
+                .HasMaxLength(64);
             entity.Property(e => e.Email).HasMaxLength(128);
             entity.Property(e => e.Password)
                 .IsRequired()
