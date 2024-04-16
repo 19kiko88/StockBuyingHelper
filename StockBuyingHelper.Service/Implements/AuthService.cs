@@ -53,7 +53,7 @@ namespace StockBuyingHelper.Service.Implements
             var user = 
                 (from userInfo in _context.Users 
                 join userRole in _context.User_Role on userInfo.Role equals userRole.Role_Id
-                where userInfo.Account.ToLower() == account.ToLower()
+                where userInfo.Account.ToLower() == account.ToLower() && userInfo.Status == true
                 select new UserInfoModel { 
                     Account = userInfo.Account,
                     Password = userInfo.Password,
@@ -81,7 +81,7 @@ namespace StockBuyingHelper.Service.Implements
             }
             else
             {
-                return (jwtToken: jwtToken, errorMsg: "帳號錯誤.");
+                return (jwtToken: jwtToken, errorMsg: "帳號密碼錯誤或帳號停止使用.");
             }
 
             var claims = new List<Claim>

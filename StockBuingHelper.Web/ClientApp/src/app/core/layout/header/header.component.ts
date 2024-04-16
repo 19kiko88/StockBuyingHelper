@@ -1,6 +1,7 @@
 import { Router } from '@angular/router';
 import { UserInfo } from '../../models/user-info';
 import { AfterViewInit, Component, Input, OnInit } from '@angular/core';
+import { JwtInfoService } from '../../services/jwt-info.service';
 
 @Component({
   selector: 'app-header',
@@ -14,6 +15,7 @@ export class HeaderComponent implements OnInit, AfterViewInit
   @Input() inputUserInfo : UserInfo | undefined
 
   constructor(
+    private _jwtInfoService: JwtInfoService,
     private _router: Router
   ) { }
 
@@ -31,6 +33,7 @@ export class HeaderComponent implements OnInit, AfterViewInit
   logOut()
   {
     window.alert('bye bye~');
+    this._jwtInfoService.removeJwt();
     this._router.navigate(['/login']);
   }
 }

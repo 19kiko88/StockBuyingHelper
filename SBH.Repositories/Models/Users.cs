@@ -19,6 +19,8 @@ public partial class Users
 
     public string Email { get; set; }
 
+    public bool Status { get; set; }
+
     public int Role { get; set; }
 
     public virtual User_Role RoleNavigation { get; set; }
