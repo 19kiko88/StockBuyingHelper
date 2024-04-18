@@ -159,7 +159,7 @@ var provider = app.Services;
 provider.UseScheduler(scheduler =>
 {
     //Crontab格式： https://hyak4j.github.io/2021_11_26_linuxcrontab/
-    scheduler.Schedule<DeleteVolumeDetailTask>().EveryMinute();///*.EverySeconds(59);*/.Cron("0 11 * * *");//UTC時間要減8小時(11:00(UTC) = 19:00(UTC+8))
+    scheduler.Schedule<DeleteVolumeDetailTask>().Cron("0 10 * * *");//UTC時間要減8小時(11:00(UTC) = 19:00(UTC+8))
 });
 
 // Configure the HTTP request pipeline.
