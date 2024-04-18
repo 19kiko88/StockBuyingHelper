@@ -9,6 +9,8 @@ using StockBuyingHelper.Service.Interfaces;
 using System.Text;
 using SBH.Repositories.Models;
 using Microsoft.EntityFrameworkCore;
+using Coravel;
+using StockBuingHelper.Web.Tasks;
 
 var builder = WebApplication.CreateBuilder(args);
 var logger = new LoggerConfiguration()
@@ -108,6 +110,16 @@ builder.Services.AddSpaStaticFiles(configuration =>
     configuration.RootPath = "wwwroot";
 });
 
+//註冊Coravel
+/*
+ *Ref：
+ *Coravel官網： https://docs.coravel.net/Scheduler/
+ *https://blog.yowko.com/coravel/
+ *Crontab格式： https://hyak4j.github.io/2021_11_26_linuxcrontab/
+ */
+builder.Services.AddScheduler();
+builder.Services.AddTransient<DeleteVolumeDetailTask>();
+
 builder.Services.AddScoped<IStockService, StockService>();
 builder.Services.AddScoped<IVolumeService, VolumeService>();
 builder.Services.AddScoped<IAdminService, AdminService>();
@@ -142,6 +154,13 @@ if (builder.Environment.IsDevelopment())
 
 
 var app = builder.Build();
+
+var provider = app.Services;
+provider.UseScheduler(scheduler =>
+{
+    //Crontab格式： https://hyak4j.github.io/2021_11_26_linuxcrontab/
+    scheduler.Schedule<DeleteVolumeDetailTask>().EveryMinute();///*.EverySeconds(59);*/.Cron("0 11 * * *");//UTC時間要減8小時(11:00(UTC) = 19:00(UTC+8))
+});
 
 // Configure the HTTP request pipeline.
 app.UseForwardedHeaders(new ForwardedHeadersOptions

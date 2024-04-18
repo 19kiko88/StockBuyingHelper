@@ -9,7 +9,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StockBuyingHelper.Service",
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StockBuyingHelper.Models", "StockBuyingHelper.Models\StockBuyingHelper.Models.csproj", "{FB076BC2-0498-45C5-90EA-6C157A71FCFE}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SBH.Repositories", "SBH.Repositories\SBH.Repositories.csproj", "{409BDBFF-03D8-4C24-9C46-B88453F675D1}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SBH.Repositories", "SBH.Repositories\SBH.Repositories.csproj", "{409BDBFF-03D8-4C24-9C46-B88453F675D1}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
