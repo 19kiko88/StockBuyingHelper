@@ -42,7 +42,7 @@ namespace StockBuyingHelper.Service.Interfaces
         /// <param name="priceLow"></param>
         /// <param name="priceHigh"></param>
         /// <returns></returns>
-        public Task<List<StockInfoModel>> GteStockInfo(List<string>? filterIds, bool queryEtfs, decimal priceLow = 0, decimal priceHigh = 99999);
+        public Task<List<StockInfoModel>> GetStockInfo(List<string>? filterIds, bool queryEtfs, decimal priceLow = 0, decimal priceHigh = 99999);
 
         /// <summary>
         /// 篩選即時價格

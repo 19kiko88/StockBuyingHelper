@@ -200,7 +200,7 @@ namespace StockBuyingHelper.Service.Implements
         /// <param name="priceLow"></param>
         /// <param name="priceHigh"></param>
         /// <returns></returns>
-        public async Task<List<StockInfoModel>> GteStockInfo(List<string>? filterIds, bool queryEtfs, decimal priceLow = 0, decimal priceHigh = 99999)
+        public async Task<List<StockInfoModel>> GetStockInfo(List<string>? filterIds, bool queryEtfs, decimal priceLow = 0, decimal priceHigh = 99999)
         {
             var stockInfo = await GetFilterStockList(queryEtfs, filterIds);
 

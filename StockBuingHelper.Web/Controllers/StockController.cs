@@ -93,7 +93,7 @@ namespace StockBuingHelper.Web.Controllers
                  * https://www.finlab.tw/%E4%B8%89%E7%A8%AE%E6%9C%88%E7%87%9F%E6%94%B6%E9%80%B2%E9%9A%8E%E7%9C%8B%E6%B3%95/
                  */
                 //篩選條件1：股價0~200
-                var listStockInfo = await _stockService.GteStockInfo(filterIds, reqData.queryEtfs, reqData.priceLow.Value, reqData.priceHigh.Value);
+                var listStockInfo = await _stockService.GetStockInfo(filterIds, reqData.queryEtfs, reqData.priceLow.Value, reqData.priceHigh.Value);
                 var list52HighLow = await _stockService.GetHighLowIn52Weeks(listStockInfo);
                 _logger.LogInformation("GetHighLowIn52Weeks OK.");                
 
