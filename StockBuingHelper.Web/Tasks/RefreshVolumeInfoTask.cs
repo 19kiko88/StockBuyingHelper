@@ -3,13 +3,13 @@ using StockBuyingHelper.Service.Interfaces;
 
 namespace StockBuingHelper.Web.Tasks
 {
-    public class DeleteVolumeDetailTask: IInvocable
+    public class RefreshVolumeInfoTask: IInvocable
     {
-        private readonly ILogger<DeleteVolumeDetailTask> _logger;
+        private readonly ILogger<RefreshVolumeInfoTask> _logger;
         private readonly IAdminService _admin;
 
-        public DeleteVolumeDetailTask(
-            ILogger<DeleteVolumeDetailTask> logger,
+        public RefreshVolumeInfoTask(
+            ILogger<RefreshVolumeInfoTask> logger,
             IAdminService admin
             )
         {
@@ -19,16 +19,16 @@ namespace StockBuingHelper.Web.Tasks
 
         public Task Invoke()
         {
-            _logger.LogInformation($"Task [DeleteVolumeDetailTask] running at: {DateTime.Now}");
+            _logger.LogInformation($"Task [RefreshVolumeInfo] running at: {DateTime.Now}");
             try
             {
-                _admin.TruncateTable("Volume_Detail");
+                _admin.RefreshVolumeInfo();
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex.Message);
             }
-            
+
             return Task.CompletedTask;
         }
     }

@@ -6,11 +6,9 @@ using System.Threading.Tasks;
 
 namespace StockBuyingHelper.Service.Dtos
 {
-    public class StockInfoDto
+    public class VtiInfoDto
     {
         public string StockId { get; set; }
-        public string StockName { get; set; }
-        public string CFICode { get; set; }
-        public string IndustryType { get; set; }
+        public double Vti { get; set; }
     }
 }

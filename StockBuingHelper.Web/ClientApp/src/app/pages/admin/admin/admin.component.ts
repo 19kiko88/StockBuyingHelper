@@ -34,8 +34,74 @@ export class AdminComponent {
       } 
       ,error: (err: HttpErrorResponse) => 
       {
-        debugger;
-        //window.alert(`error. ${err}`);
+        this._loadingService.setLoading(false);
+      }      
+    });
+  }
+
+  RefreshStockList()
+  {
+    this._loadingService.setLoading(true);
+
+    this._adminService.RefreshStockList().subscribe({
+      complete: () =>{
+        window.alert('refresh StockList done.');
+        this._loadingService.setLoading(false);
+      }
+      ,error: (err: HttpErrorResponse) => 
+      {
+        window.alert('refresh StockList fail.');
+        this._loadingService.setLoading(false);
+      }      
+    });
+  }
+
+  RefreshRevenueInfo()
+  {
+    this._loadingService.setLoading(true);
+
+    this._adminService.RefreshRevenueInfo().subscribe({
+      complete: () =>{
+        window.alert('refresh RevenueInfo done.');
+        this._loadingService.setLoading(false);
+      }
+      ,error: (err: HttpErrorResponse) => 
+      {
+        window.alert('refresh RevenueInfo fail.');
+        this._loadingService.setLoading(false);
+      }      
+    });
+  }
+
+  RefreshVolumeInfo()
+  {
+    this._loadingService.setLoading(true);
+
+    this._adminService.RefreshVolumeInfo().subscribe({
+      complete: () =>{
+        window.alert('refresh VolumeInfo done.');
+        this._loadingService.setLoading(false);
+      }
+      ,error: (err: HttpErrorResponse) => 
+      {
+        window.alert('refresh VolumeInfo fail.');
+        this._loadingService.setLoading(false);
+      }      
+    });
+  }
+
+  RefreshEpsInfo()
+  {
+    this._loadingService.setLoading(true);
+
+    this._adminService.RefreshEpsInfo().subscribe({
+      complete: () =>{
+        window.alert('refresh EpsInfo done.');
+        this._loadingService.setLoading(false);
+      }
+      ,error: (err: HttpErrorResponse) => 
+      {
+        window.alert('refresh EpsInfo fail.');
         this._loadingService.setLoading(false);
       }      
     });

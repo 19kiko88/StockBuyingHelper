@@ -25,7 +25,6 @@ namespace StockBuingHelper.Web.Controllers
         public StockController(
             IStockService stockService, 
             IVolumeService volumeService, 
-            IAdminService adminService,
             IOptions<AppSettings.CustomizeSettings> appCustSettings,
             ILogger<StockController> logger
             )
@@ -84,7 +83,7 @@ namespace StockBuingHelper.Web.Controllers
                     {
                         filterIds = new List<string> { reqData.specificStockId };
                     }
-                }                   
+                }
 
                 /*
                  * 選股條件ref：
@@ -92,73 +91,63 @@ namespace StockBuingHelper.Web.Controllers
                  * https://www.ptt.cc/bbs/Stock/M.1468072684.A.DD1.html
                  * https://www.finlab.tw/%E4%B8%89%E7%A8%AE%E6%9C%88%E7%87%9F%E6%94%B6%E9%80%B2%E9%9A%8E%E7%9C%8B%E6%B3%95/
                  */
-                //篩選條件1：股價0~200
-                var listStockInfo = await _stockService.GetStockInfo(filterIds, reqData.queryEtfs, reqData.priceLow.Value, reqData.priceHigh.Value);
-                var list52HighLow = await _stockService.GetHighLowIn52Weeks(listStockInfo);
-                _logger.LogInformation("GetHighLowIn52Weeks OK.");                
 
-                //篩選條件2：vti(reqData.vtiIndex) > 800
-                var listVti = await _stockService.GetFilterVTI(list52HighLow, reqData.vtiIndex);
-                var vtiFilterIds = listVti.Select(c => c.StockId).ToList();
-                _logger.LogInformation("GetFilterVTI OK.");
+                //篩選條件：UI篩選條件
+                var listStockInfo = await _stockService.GetFilterStockInfo(reqData.queryEtfs, filterIds);
 
-                #region Yahoo API(要減少Request次數，變免被block)
+                //篩選條件：股價區間，預設0~200
+                var listPrice = await _stockService.GetFilterPrice(reqData.priceLow.Value, reqData.priceHigh.Value);
 
-                #region get Volume
-                //篩選條件3：查詢的交易日範圍內，平均成交量大於500
-                var volumeData = await _stockService.GetFilterVolume(vtiFilterIds, reqData.volume.Value, reqData.volumeTxDateInterval.Value);
-                var listVolume = volumeData.Item1;
-                var volumeNotInDb = volumeData.Item2;
-                _volumeService.InsertVolumeDetail(volumeNotInDb);
-                var volumeIds = listVolume.Select(cc => cc.StockId);
-                var volumeFilterData = listStockInfo.Where(c => volumeIds.Contains(c.StockId)).ToList();
-                yahooApiRequestCount += volumeNotInDb.Count;
-                _logger.LogInformation("GetFilterVolume OK.");
-                #endregion
+                //篩選條件2：vti(reqData.vtiIndex)，預設80~100
+                var listVti = await _stockService.GetFilterVTI(listPrice, reqData.vtiIndex);
 
-                #region get EPS & PE
-                //篩選條件4：近四季eps>1。縮小資料範圍
-                var listEps = await _stockService.GetFilterEps(volumeFilterData, reqData.epsAcc4Q.Value, _appCustSettings.OperationSystem);
-                var epsIds = listEps.Select(cc => cc.StockId);
-                var epsFilterData = listStockInfo.Where(c => epsIds.Contains(c.StockId)).ToList();
-                yahooApiRequestCount += volumeFilterData.Count;
-                _logger.LogInformation("GetFilterPe OK.");
-                #endregion
+                //篩選條件3：營收篩選(近3個月的月營收YoY必須為正成長 && 最新的YoY必須要大於0)
+                var listRevenu = await _stockService.GetFilterRevenue(3);
 
-                #region get Revenue
-                /*篩選條件5：
-                 * 5-1：近3個月的月營收YoY必須為正成長 && 最新的YoY必須要大於0
-                 * 5-2：pe <= 20
-                 */
-                var listRevenue = await _stockService.GetFilterRevenueAndPe(epsFilterData, 6, reqData.pe.Value);
-                yahooApiRequestCount += epsFilterData.Count;
-                _logger.LogInformation("GetFilterRevenue OK.");
-                #endregion
+                //篩選條件4：查詢的交易日範圍內，平均成交量大於(預設)500
+                var listVolume = await _stockService.GetFilterVolume(reqData.volume.Value);
 
-                #endregion
+                //篩選條件5：近四季eps > (預設)1
+                var listEps = await _stockService.GetFilterEps(reqData.epsAcc4Q.Value, _appCustSettings.OperationSystem);
+
+                filterIds =
+                    (
+                    from stock in listStockInfo
+                    join price in listPrice on stock.StockId equals price.StockId
+                    join vti in listVti on price.StockId equals vti.StockId
+                    join revenu in listRevenu on vti.StockId equals revenu.StockId
+                    join volume in listVolume on revenu.StockId equals volume.StockId
+                    join eps in listEps on volume.StockId equals eps.StockId
+                    select stock.StockId).ToList();
+
+                //篩選條件5：pe <= 20
+                var listPe = await _stockService.GetFilterPe(filterIds, 6, reqData.pe.Value);
+                yahooApiRequestCount += filterIds.Count;
 
                 res.Content =
-                    (from revenue in listRevenue
-                     join eps in listEps on revenue.StockId equals eps.StockId
-                     join volume in listVolume on eps.StockId equals volume.StockId
-                     join vti in listVti on volume.StockId equals vti.StockId
-                     join highLowin52 in list52HighLow on vti.StockId equals highLowin52.StockId
-                     join stockInfo in listStockInfo on highLowin52.StockId equals stockInfo.StockId
-                     select new BuyingResultDto
+                    (
+                    from stock in listStockInfo
+                    join price in listPrice on stock.StockId equals price.StockId
+                    join vti in listVti on price.StockId equals vti.StockId
+                    join revenu in listRevenu on vti.StockId equals revenu.StockId
+                    join volume in listVolume on revenu.StockId equals volume.StockId
+                    join eps in listEps on revenu.StockId equals eps.StockId
+                    join pe in listPe on revenu.StockId equals pe.StockId
+                    select new BuyingResultDto
                      {
-                         stockId = stockInfo.StockId,
-                         stockName = stockInfo.StockName,
-                         price = stockInfo.Price,
-                         highIn52 = highLowin52.HighPriceInCurrentYear,
-                         lowIn52 = highLowin52.LowPriceInCurrentYear,
+                         stockId = stock.StockId,
+                         stockName = stock.StockName,
+                         price = price.Price,
+                         highIn52 = price.HighPriceInCurrentYear,
+                         lowIn52 = price.LowPriceInCurrentYear,
                          epsInterval = eps.EpsAcc4QInterval,
                          eps = eps.EpsAcc4Q,
-                         pe = revenue.pe,
-                         revenueDatas = revenue.RevenueData,
+                         pe = pe.Pe,
+                         revenueDatas = revenu.RevenueData,
                          volumeDatas = volume.VolumeInfo.OrderByDescending(o => o.txDate).ToList(),
-                         vti = Math.Round(vti.VTI * 100, 2),
-                         amount = vti.Amount,
-                         cfiCode = stockInfo.CFICode
+                         vti = Math.Round(vti.Vti * 100, 2),
+                         //amount = vti.Amount,
+                         cfiCode = stock.CFICode
                      }
                     )
                     .OrderByDescending(o => o.cfiCode).ThenByDescending(o => o.eps).ThenByDescending(o => o.amount)
@@ -186,7 +175,7 @@ namespace StockBuingHelper.Web.Controllers
             res.Success = true;
 
             return res;
-        }
+        }        
 
         //getROE
         //filter0050

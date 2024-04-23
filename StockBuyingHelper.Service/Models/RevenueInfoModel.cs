@@ -9,8 +9,6 @@ namespace StockBuyingHelper.Service.Models
     public class RevenueInfoModel
     {
         public string StockId { get; set; }
-        public string StockName { get; set; }
-        public double pe { get; set; }
         public List<RevenueData> RevenueData { get; set; }
     }
 

@@ -13,10 +13,6 @@ namespace StockBuyingHelper.Service.Models
         /// </summary>
         public string StockId { get; set; }
         /// <summary>
-        /// 名稱
-        /// </summary>
-        public string StockName { get; set; }
-        /// <summary>
         /// 成交
         /// </summary>
         public decimal Price { get; set; }

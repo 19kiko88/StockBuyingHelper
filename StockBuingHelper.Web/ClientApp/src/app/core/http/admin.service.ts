@@ -26,4 +26,36 @@ export class AdminService extends BaseService {
     return this._httpClient.delete<IResultDto<number>>(url, options);
     //.pipe(map( res => this.processResult(res)));
   }
+
+  RefreshStockList():Observable<IResultDto<number>>
+  {
+    const url = `${environment.apiBaseUrl}/Admin/RefreshStockList`;
+    const options = this.generatePostOptions();
+
+    return this._httpClient.post<IResultDto<number>>(url, options);
+  }
+
+  RefreshRevenueInfo():Observable<IResultDto<number>>
+  {
+    const url = `${environment.apiBaseUrl}/Admin/RefreshRevenueInfo`;
+    const options = this.generatePostOptions();
+
+    return this._httpClient.post<IResultDto<number>>(url, options);
+  }
+
+  RefreshVolumeInfo():Observable<IResultDto<number>>
+  {
+    const url = `${environment.apiBaseUrl}/Admin/RefreshVolumeInfo`;
+    const options = this.generatePostOptions();
+
+    return this._httpClient.post<IResultDto<number>>(url, options);
+  }
+
+  RefreshEpsInfo():Observable<IResultDto<number>>
+  {
+    const url = `${environment.apiBaseUrl}/Admin/RefreshEpsInfo`;
+    const options = this.generatePostOptions();
+
+    return this._httpClient.post<IResultDto<number>>(url, options);
+  }
 }

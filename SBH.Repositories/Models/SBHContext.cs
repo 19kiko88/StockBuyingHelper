@@ -13,12 +13,62 @@ public partial class SBHContext : DbContext
     {
     }
 
+    public virtual DbSet<Eps_Info> Eps_Info { get; set; }
+
+    public virtual DbSet<Revenue_Info> Revenue_Info { get; set; }
+
+    public virtual DbSet<Stock_Info> Stock_Info { get; set; }
+
     public virtual DbSet<User_Role> User_Role { get; set; }
 
     public virtual DbSet<Users> Users { get; set; }
 
+    public virtual DbSet<Volume_Detail> Volume_Detail { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<Eps_Info>(entity =>
+        {
+            entity.HasKey(e => e.Stock_Id);
+
+            entity.Property(e => e.Stock_Id).HasMaxLength(10);
+            entity.Property(e => e.Eps_Acc_4Q).HasColumnType("money");
+            entity.Property(e => e.Eps_Acc_4Q_Interval_End).HasMaxLength(8);
+            entity.Property(e => e.Eps_Acc_4Q_Interval_Start).HasMaxLength(8);
+        });
+
+        modelBuilder.Entity<Revenue_Info>(entity =>
+        {
+            entity.HasKey(e => new { e.Stock_Id, e.Interval_Year, e.Interval_Month });
+
+            entity.Property(e => e.Stock_Id).HasMaxLength(8);
+            entity.Property(e => e.Interval_Year)
+                .HasMaxLength(4)
+                .IsUnicode(false)
+                .IsFixedLength();
+            entity.Property(e => e.Interval_Month).HasMaxLength(2);
+            entity.Property(e => e.MoM).HasColumnType("numeric(18, 2)");
+            entity.Property(e => e.YoY).HasColumnType("numeric(18, 2)");
+            entity.Property(e => e.YoYMonth).HasColumnType("numeric(18, 2)");
+        });
+
+        modelBuilder.Entity<Stock_Info>(entity =>
+        {
+            entity.HasKey(e => e.Stock_Id);
+
+            entity.Property(e => e.Stock_Id).HasMaxLength(8);
+            entity.Property(e => e.CFICode)
+                .IsRequired()
+                .HasMaxLength(8);
+            entity.Property(e => e.Industry_Type).HasMaxLength(8);
+            entity.Property(e => e.Market)
+                .IsRequired()
+                .HasMaxLength(8);
+            entity.Property(e => e.Stock_Name)
+                .IsRequired()
+                .HasMaxLength(16);
+        });
+
         modelBuilder.Entity<User_Role>(entity =>
         {
             entity.HasKey(e => e.Role_Id).HasName("PK__User_Rol__D80AB4BB6926C616");
@@ -51,6 +101,14 @@ public partial class SBHContext : DbContext
                 .HasForeignKey(d => d.Role)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK__Users__Role__4CA06362");
+        });
+
+        modelBuilder.Entity<Volume_Detail>(entity =>
+        {
+            entity.HasKey(e => new { e.Stock_Id, e.Tx_Date });
+
+            entity.Property(e => e.Stock_Id).HasMaxLength(10);
+            entity.Property(e => e.Tx_Date).HasColumnType("date");
         });
 
         OnModelCreatingPartial(modelBuilder);

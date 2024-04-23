@@ -118,7 +118,9 @@ builder.Services.AddSpaStaticFiles(configuration =>
  *Crontab格式： https://hyak4j.github.io/2021_11_26_linuxcrontab/
  */
 builder.Services.AddScheduler();
-builder.Services.AddTransient<DeleteVolumeDetailTask>();
+builder.Services.AddTransient<RefreshVolumeInfoTask>();
+builder.Services.AddTransient<RefreshRevenueInfoTask>();
+builder.Services.AddTransient<RefreshEpsInfoTask>();
 
 builder.Services.AddScoped<IStockService, StockService>();
 builder.Services.AddScoped<IVolumeService, VolumeService>();
@@ -159,7 +161,9 @@ var provider = app.Services;
 provider.UseScheduler(scheduler =>
 {
     //Crontab格式： https://hyak4j.github.io/2021_11_26_linuxcrontab/
-    scheduler.Schedule<DeleteVolumeDetailTask>().Cron("0 10 * * *");//UTC時間要減8小時(11:00(UTC) = 19:00(UTC+8))
+    scheduler.Schedule<RefreshVolumeInfoTask>().Cron("0 10 * * *");//UTC時間要減8小時(10:00(UTC) = 18:00(UTC+8))
+    scheduler.Schedule<RefreshRevenueInfoTask>().Cron("30 18 * * *");//UTC時間要減8小時(18:30(UTC) = 02:30(UTC+8))
+    scheduler.Schedule<RefreshEpsInfoTask>().Cron("30 19 * * *");//UTC時間要減8小時(19:30(UTC) = 03:30(UTC+8))
 });
 
 // Configure the HTTP request pipeline.
