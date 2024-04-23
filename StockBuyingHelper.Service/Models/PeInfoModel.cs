@@ -6,10 +6,9 @@ using System.Threading.Tasks;
 
 namespace StockBuyingHelper.Service.Models
 {
-    public class StockPriceInfoModel
+    public class PeInfoModel
     {
         public string StockId { get; set; }
-        public decimal Price { get; set; }
-        public string Type { get; set; }
+        public double Pe { get; set; }
     }
 }

@@ -4,13 +4,12 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace StockBuyingHelper.Service.Models
+namespace StockBuyingHelper.Service.Dtos
 {
-    public class EqsInfoModel
+    public class EpsInfoDto
     {
         public string StockId { get; set; }
-        public string StockName { get; set; }
         public string EpsAcc4QInterval { get; set; }
-        public decimal EpsAcc4Q { get; set; }        
+        public decimal EpsAcc4Q { get; set; }
     }
 }
