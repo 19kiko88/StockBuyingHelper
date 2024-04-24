@@ -9,7 +9,8 @@ import { SliderModule } from 'primeng/slider';
   imports: [
     CommonModule,
     TableModule,
-    SliderModule
+    SliderModule,
+    TableModule
   ],
   exports:[    
     TableModule,

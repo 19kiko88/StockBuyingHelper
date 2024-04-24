@@ -1,4 +1,5 @@
-﻿using System;
+﻿using StockBuyingHelper.Service.Dtos;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -13,5 +14,6 @@ namespace StockBuyingHelper.Service.Interfaces
         public Task RefreshRevenueInfo();
         public Task RefreshVolumeInfo();
         public Task RefreshEpsInfo(string Os = "Windows");
+        public Task<List<HistoryInfoDto>> GetHistory();
     }
 }

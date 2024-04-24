@@ -835,9 +835,7 @@ namespace StockBuyingHelper.Service.Implements
 
         public async Task<List<RevenueInfoModel>> GetFilterRevenue(int revenueTakeCount = 3)
         {
-            var list = new List<RevenueInfoModel> ();
-
-            list = _context.Revenue_Info.GroupBy(g => g.Stock_Id).Select(s => new RevenueInfoModel()
+            var revenueData = _context.Revenue_Info.GroupBy(g => g.Stock_Id).Select(s => new RevenueInfoModel()
             {
                 StockId = s.Key,
                 RevenueData = s.Select(ss => new RevenueData()
@@ -847,22 +845,41 @@ namespace StockBuyingHelper.Service.Implements
                     monthYOY = Convert.ToDouble(ss.YoYMonth),
                     yoy = Convert.ToDouble(ss.YoY)
                 }).OrderByDescending(c => c.revenueInterval).ToList()
-            }).ToList();
+            }).AsEnumerable();
+
+            //revenueData沒有ETF的資料，要用Stock_Info left join重新加入。
+            var groupJoinData =
+            _context.Stock_Info.GroupJoin(
+                revenueData,
+                a => a.Stock_Id,
+                b => b.StockId,
+                (a, b) => new { StockId = a.Stock_Id, CFICode = a.CFICode, RevenueData = b }
+                ).SelectMany(c => c.RevenueData.DefaultIfEmpty(), (a, b) => new
+                {
+                    a.StockId,
+                    a.CFICode,
+                    RevenueData = b.RevenueData ?? null
+                }).AsEnumerable();
 
             if (!IgnoreFilter)
             {
-                list =
-                    (from a in _context.Stock_Info.ToList()
-                    join b in list on a.Stock_Id equals b.StockId
+                groupJoinData =
+                    (
+                    from a in groupJoinData
                     where
-                    a.CFICode == StockType.ESVUFR && (!b.RevenueData.Take(revenueTakeCount).Where(c => c.monthYOY < 0).Any() && (b.RevenueData.Count > 0 && b.RevenueData[0].yoy > 0))
+                    a.CFICode == StockType.ESVUFR && (!a.RevenueData.Take(revenueTakeCount).Where(c => c.monthYOY < 0).Any() && (a.RevenueData.Count > 0 && a.RevenueData[0].yoy > 0))
                     ||
                     StockType.ETFs.Contains(a.CFICode)
-                    select b).ToList() ;
-
+                    select a).AsEnumerable();
             }
+
+            var res = groupJoinData.Select(c => new RevenueInfoModel()
+            {
+                StockId = c.StockId,
+                RevenueData = c.RevenueData
+            }).ToList();
               
-            return list;
+            return res;
         }
     }
 }
