@@ -1,5 +1,6 @@
 ﻿using EFCore.BulkExtensions;
 using SBH.Repositories.Models;
+using StockBuyingHelper.Service.Dtos;
 using StockBuyingHelper.Service.Enums;
 using StockBuyingHelper.Service.Interfaces;
 using StockBuyingHelper.Service.Models;
@@ -139,6 +140,19 @@ namespace StockBuyingHelper.Service.Implements
             }
 
             _context.BulkInsert(data);
+        }
+
+        public async Task<List<HistoryInfoDto>> GetHistory()
+        {
+            var data = _context.History.Select(c => new HistoryInfoDto()
+            {
+                HistoryId = c.History_Id,   
+                Content = c.Content,
+                CreateUser = c.Create_User,
+                CreateDate = DateOnly.FromDateTime(c.Create_Date_Time)
+            }).ToList();
+
+            return data;
         }
     }
 }

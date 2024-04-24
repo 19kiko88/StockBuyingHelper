@@ -15,6 +15,8 @@ public partial class SBHContext : DbContext
 
     public virtual DbSet<Eps_Info> Eps_Info { get; set; }
 
+    public virtual DbSet<History> History { get; set; }
+
     public virtual DbSet<Revenue_Info> Revenue_Info { get; set; }
 
     public virtual DbSet<Stock_Info> Stock_Info { get; set; }
@@ -35,6 +37,22 @@ public partial class SBHContext : DbContext
             entity.Property(e => e.Eps_Acc_4Q).HasColumnType("money");
             entity.Property(e => e.Eps_Acc_4Q_Interval_End).HasMaxLength(8);
             entity.Property(e => e.Eps_Acc_4Q_Interval_Start).HasMaxLength(8);
+        });
+
+        modelBuilder.Entity<History>(entity =>
+        {
+            entity.HasKey(e => e.History_Id);
+
+            entity.Property(e => e.History_Id).HasDefaultValueSql("((1))");
+            entity.Property(e => e.Content)
+                .IsRequired()
+                .HasMaxLength(1024);
+            entity.Property(e => e.Create_Date_Time).HasColumnType("datetime");
+            entity.Property(e => e.Create_User)
+                .IsRequired()
+                .HasMaxLength(64);
+            entity.Property(e => e.Modify_Date_Time).HasColumnType("datetime");
+            entity.Property(e => e.Modify_User).HasMaxLength(64);
         });
 
         modelBuilder.Entity<Revenue_Info>(entity =>

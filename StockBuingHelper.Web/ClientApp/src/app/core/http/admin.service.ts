@@ -4,6 +4,7 @@ import { BaseService } from './base.service';
 import { IResultDto } from '../dtos/response/result-dto';
 import { Observable } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
+import { ResGetHistoryDto } from '../dtos/response/res-get-history-dto';
 
 @Injectable({
   providedIn: 'root'
@@ -58,4 +59,14 @@ export class AdminService extends BaseService {
 
     return this._httpClient.post<IResultDto<number>>(url, options);
   }
+
+  GetHistory():Observable<IResultDto<ResGetHistoryDto[]>>
+  {
+    const url = `${environment.apiBaseUrl}/Admin/GetHistory`;
+    const options = this.generatePostOptions();
+
+    return this._httpClient.get<IResultDto<ResGetHistoryDto[]>>(url, options);
+  }
+
+
 }

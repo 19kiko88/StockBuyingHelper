@@ -56,7 +56,13 @@ namespace StockBuingHelper.Web.Controllers
 
                 if (reqData.volume < 500)
                 {
-                    validateMsg += "平均成交量至少大(等)於500.";                    
+                    validateMsg += "平均成交量至少大(等)於500.";
+                }
+
+                //"manual"
+                if (reqData.queryType == "manual" && string.IsNullOrEmpty(reqData.specificStockId))
+                {
+                    validateMsg += "請輸入股票代碼";
                 }
 
                 if (!string.IsNullOrEmpty(validateMsg))

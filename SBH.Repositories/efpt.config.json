@@ -20,6 +20,10 @@
          "ObjectType": 0
       },
       {
+         "Name": "[dbo].[History]",
+         "ObjectType": 0
+      },
+      {
          "Name": "[dbo].[Revenue_Info]",
          "ObjectType": 0
       },
