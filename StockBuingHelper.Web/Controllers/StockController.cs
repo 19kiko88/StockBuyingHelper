@@ -46,7 +46,7 @@ namespace StockBuingHelper.Web.Controllers
 
                 string validateMsg = string.Empty;
 
-                var highLow52Path = _appCustSettings.PathSettings.HighLow52Data;
+                var highLow52Path = _appCustSettings.PathSettings.HighLow52Data;                
                 if (!Path.Exists(highLow52Path))
                 {
                     Directory.CreateDirectory(highLow52Path);
