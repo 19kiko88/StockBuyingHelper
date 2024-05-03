@@ -663,58 +663,20 @@ namespace StockBuyingHelper.Service.Implements
                 {
                     foreach (var id in vtiData)
                     {
-                        var sr = string.Empty;
-
                         using (HttpRequestMessage reqest = new HttpRequestMessage(HttpMethod.Get, $"https://tw.stock.yahoo.com/quote/{id}.TW/revenue"))
                         {
-
                             lock (_lock)
                             {
-                                sr = httpClient.Send(reqest).Content.ReadAsStringAsync().Result;
-                            }
-
-                            var document = context.OpenAsync(res => res.Content(sr)).Result;
-                            var peInfo = new PeInfoModel()
-                            {
-                                StockId = id,
-                                Pe = double.TryParse(document.QuerySelector("#main-0-QuoteHeader-Proxy div").ChildNodes[1].ChildNodes[1].ChildNodes[1].TextContent.Split('(')[0].Trim(), out var pe) ? pe : 99999d,//取得本益比(pe)
-                            };
-
-                            lock (_lock)
-                            {
+                                var sr = httpClient.Send(reqest).Content.ReadAsStringAsync().Result;
+                                var document = context.OpenAsync(res => res.Content(sr)).Result;
+                                var peInfo = new PeInfoModel()
+                                {
+                                    StockId = id,
+                                    Pe = double.TryParse(document.QuerySelector("#main-0-QuoteHeader-Proxy div").ChildNodes[1].ChildNodes[1].ChildNodes[1].TextContent.Split('(')[0].Trim(), out var pe) ? pe : 99999d,//取得本益比(pe)
+                                };
                                 res.Add(peInfo);
                             }
                         }
-
-
-
-
-
-
-
-
-
-
-
-                        //var url = $"https://tw.stock.yahoo.com/quote/{id}.TW/revenue";
-                        //var resMessage = await httpClient.GetAsync(url);
-
-                        ////檢查回應的伺服器狀態StatusCode是否是200 OK
-                        //if (resMessage.StatusCode == HttpStatusCode.OK)
-                        //{
-                        //    var sr = await resMessage.Content.ReadAsStringAsync();
-                        //    var document = await context.OpenAsync(res => res.Content(sr));
-                        //    var peInfo = new PeInfoModel()
-                        //    {
-                        //        StockId = id,
-                        //        Pe = double.TryParse(document.QuerySelector("#main-0-QuoteHeader-Proxy div").ChildNodes[1].ChildNodes[1].ChildNodes[1].TextContent.Split('(')[0].Trim(), out var pe) ? pe : 99999d,//取得本益比(pe)
-                        //    };
-
-                        //    lock (_lock)
-                        //    {
-                        //        res.Add(peInfo);
-                        //    }
-                        //}
                     }
                 });
             }
