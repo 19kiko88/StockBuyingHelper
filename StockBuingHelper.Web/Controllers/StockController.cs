@@ -18,19 +18,16 @@ namespace StockBuingHelper.Web.Controllers
     public class StockController : ControllerBase
     {
         private readonly IStockService _stockService;
-        private readonly IVolumeService _volumeService;
         private readonly AppSettings.CustomizeSettings _appCustSettings;
         private readonly ILogger<StockController> _logger;
 
         public StockController(
             IStockService stockService, 
-            IVolumeService volumeService, 
             IOptions<AppSettings.CustomizeSettings> appCustSettings,
             ILogger<StockController> logger
             )
         {
             _stockService = stockService;
-            _volumeService = volumeService;
             _appCustSettings = appCustSettings.Value;
             _logger = logger;
         }
