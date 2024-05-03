@@ -19,10 +19,13 @@
 
   <ItemGroup>
     <Compile Remove="Controllers\StockBuyingHelperController.cs" />
+    <Compile Remove="Controllers\WeatherForecastController.cs" />
     <Compile Remove="WeatherForecast.cs" />
   </ItemGroup>
 
   <ItemGroup>
+    <None Remove="Contents\HighLow52\StockList.html" />
+    <None Remove="Contents\HighLow52\StockList.xls" />
     <None Remove="Properties\PublishProfiles\FolderProfile.pubxml" />
   </ItemGroup>
 
@@ -55,6 +58,10 @@
     <None Update="Keys\sbh.pub.pem">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Contents\HighLow52\" />
   </ItemGroup>
 
 </Project>

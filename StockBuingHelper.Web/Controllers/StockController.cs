@@ -18,19 +18,16 @@ namespace StockBuingHelper.Web.Controllers
     public class StockController : ControllerBase
     {
         private readonly IStockService _stockService;
-        private readonly IVolumeService _volumeService;
         private readonly AppSettings.CustomizeSettings _appCustSettings;
         private readonly ILogger<StockController> _logger;
 
         public StockController(
             IStockService stockService, 
-            IVolumeService volumeService, 
             IOptions<AppSettings.CustomizeSettings> appCustSettings,
             ILogger<StockController> logger
             )
         {
             _stockService = stockService;
-            _volumeService = volumeService;
             _appCustSettings = appCustSettings.Value;
             _logger = logger;
         }
@@ -48,6 +45,17 @@ namespace StockBuingHelper.Web.Controllers
                 sw.Start();
 
                 string validateMsg = string.Empty;
+
+                var highLow52Path = _appCustSettings.PathSettings.HighLow52Data;
+                if (!Path.Exists(highLow52Path))
+                {
+                    Directory.CreateDirectory(highLow52Path);
+                }
+
+                if (Directory.GetFiles(highLow52Path, "*.csv").Any() == false)
+                {
+                    validateMsg += "查無52周區間內最高&最低價資料csv檔.";
+                }
 
                 if (!(reqData.volumeTxDateInterval >= 3 && reqData.volumeTxDateInterval <= 10))
                 {
@@ -97,7 +105,6 @@ namespace StockBuingHelper.Web.Controllers
                  * https://www.ptt.cc/bbs/Stock/M.1468072684.A.DD1.html
                  * https://www.finlab.tw/%E4%B8%89%E7%A8%AE%E6%9C%88%E7%87%9F%E6%94%B6%E9%80%B2%E9%9A%8E%E7%9C%8B%E6%B3%95/
                  */
-
                 //篩選條件：UI篩選條件
                 var listStockInfo = await _stockService.GetFilterStockInfo(reqData.queryEtfs, filterIds);
 

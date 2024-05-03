@@ -43,7 +43,7 @@ namespace StockBuyingHelper.Service.Interfaces
         /// </summary>
         /// <param name="taskCount">多執行緒的Task數量</param>
         /// <returns></returns>
-        public Task<List<StockPriceInfoModel>> GetPrice(/*List<string>? specificIds = null, */int taskCount = 25);
+        public Task<List<StockPriceInfoModel>> GetPrice(int taskCount = 25);
 
         /// <summary>
         /// 篩選即時價格
@@ -55,11 +55,10 @@ namespace StockBuyingHelper.Service.Interfaces
 
         /// <summary>
         /// 取得52周間最高 & 最低價(非最終成交價)
-        /// </summary>
-        /// <param name="realTimeData">即時成交價</param>
+        /// </summary>        
         /// <param name="taskCount">多執行緒的Task數量</param>
         /// <returns></returns>
-        public Task<List<StockHighLowIn52WeeksInfoModel>> GetHighLowIn52Weeks(/*List<StockInfoModel> realTimeData, */int taskCount = 25);
+        public Task<List<StockHighLowIn52WeeksInfoModel>> GetHighLowIn52Weeks(int taskCount = 25);
 
         /// <summary>
         /// 取得近52周最高最低價格區間內，目前價格離最高價還有多少百分比，並換算成vti係數(vti越高，表示離52周區間內最高點越近)
