@@ -220,98 +220,107 @@ namespace StockBuyingHelper.Service.Implements
         /// <returns></returns>
         public async Task<List<StockHighLowIn52WeeksInfoModel>> GetHighLowIn52Weeks(int taskCount = 25)
         {
-            var file = Directory.GetFiles(_appCustSettings.PathSettings.HighLow52Data, "*.csv")
-                .Select(c => new FileInfo(c))
-                .OrderByDescending(o => o.Name)
-                .FirstOrDefault();
+            var res = new List<StockHighLowIn52WeeksInfoModel> ();
 
-            var res = File.ReadAllLines(file.FullName).Skip(1).Select(c => new StockHighLowIn52WeeksInfoModel
-            {
-                StockId = c.Split(",")[0].ToString().Replace("=", "").Replace("\"", ""),
-                HighPriceInCurrentYear = decimal.TryParse(c.Split(",")[16].ToString().Replace("=", "").Replace("\"", ""), out var highPrice) ? highPrice : 0,
-                LowPriceInCurrentYear = decimal.TryParse(c.Split(",")[18].ToString().Replace("=", "").Replace("\"", ""), out var lowPrice) ? lowPrice : 0,
-            }).ToList();
+            if (AppCacheUtils.IsSet(CacheType.PriceHighLowIn52WeeksList) == false)
+            { 
+                var file = Directory.GetFiles(_appCustSettings.PathSettings.HighLow52Data, "*.csv")
+                    .Select(c => new FileInfo(c))
+                    .OrderByDescending(o => o.Name)
+                    .FirstOrDefault();
+
+                res = File.ReadAllLines(file.FullName).Skip(1).Select(c => new StockHighLowIn52WeeksInfoModel
+                {
+                    StockId = c.Split(",")[0].ToString().Replace("=", "").Replace("\"", ""),
+                    HighPriceInCurrentYear = decimal.TryParse(c.Split(",")[16].ToString().Replace("=", "").Replace("\"", ""), out var highPrice) ? highPrice : 0,
+                    LowPriceInCurrentYear = decimal.TryParse(c.Split(",")[18].ToString().Replace("=", "").Replace("\"", ""), out var lowPrice) ? lowPrice : 0,
+                }).ToList();
+
+                AppCacheUtils.Set(CacheType.PriceHighLowIn52WeeksList, res, AppCacheUtils.Expiration.Absolute, cacheExpireTime);
+            }
+
+            res = (List<StockHighLowIn52WeeksInfoModel>)AppCacheUtils.Get(CacheType.PriceHighLowIn52WeeksList);
 
             return res;
 
-            //if (AppCacheUtils.IsSet(CacheType.PriceHighLowIn52WeeksList) == false)
-            //{
-            //    var httpClient = new HttpClient();
-            //    //add header [User-Agent]，避免被檢查出爬蟲
-            //    httpClient.DefaultRequestHeaders.Add("User-Agent", @"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36");
+                //if (AppCacheUtils.IsSet(CacheType.PriceHighLowIn52WeeksList) == false)
+                //{
+                //    var httpClient = new HttpClient();
+                //    //add header [User-Agent]，避免被檢查出爬蟲
+                //    httpClient.DefaultRequestHeaders.Add("User-Agent", @"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36");
 
-            //    //最高/最低股價統計(三個月/半個月/一年)
-            //    var url = "https://goodinfo.tw/tw2/StockList.asp?MARKET_CAT=%E4%B8%8A%E5%B8%82&INDUSTRY_CAT=%E4%B8%8A%E5%B8%82%E5%85%A8%E9%83%A8&SHEET=%E6%BC%B2%E8%B7%8C%E5%8F%8A%E6%88%90%E4%BA%A4%E7%B5%B1%E8%A8%88&SHEET2=%E6%9C%80%E9%AB%98%2F%E6%9C%80%E4%BD%8E%E8%82%A1%E5%83%B9%E7%B5%B1%E8%A8%88(%E4%B8%89%E5%80%8B%E6%9C%88%2F%E5%8D%8A%E5%B9%B4%2F%E4%B8%80%E5%B9%B4)";
-            //    var resMessage = await httpClient.GetAsync(url);            
+                //    //最高/最低股價統計(三個月/半個月/一年)
+                //    var url = "https://goodinfo.tw/tw2/StockList.asp?MARKET_CAT=%E4%B8%8A%E5%B8%82&INDUSTRY_CAT=%E4%B8%8A%E5%B8%82%E5%85%A8%E9%83%A8&SHEET=%E6%BC%B2%E8%B7%8C%E5%8F%8A%E6%88%90%E4%BA%A4%E7%B5%B1%E8%A8%88&SHEET2=%E6%9C%80%E9%AB%98%2F%E6%9C%80%E4%BD%8E%E8%82%A1%E5%83%B9%E7%B5%B1%E8%A8%88(%E4%B8%89%E5%80%8B%E6%9C%88%2F%E5%8D%8A%E5%B9%B4%2F%E4%B8%80%E5%B9%B4)";
+                //    var resMessage = await httpClient.GetAsync(url);            
 
-            //    //檢查回應的伺服器狀態StatusCode是否是200 OK
-            //    if (resMessage.StatusCode == System.Net.HttpStatusCode.OK)
-            //    {
-            //        var sr = await resMessage.Content.ReadAsStringAsync();
-            //        var config = Configuration.Default;
-            //        var context = BrowsingContext.New(config);
-            //        var document = await context.OpenAsync(c => c.Content(sr));
-            //        var listTR = document.QuerySelectorAll("tr[id^=row]");     
-                
-            //        var group = TaskUtils.GroupSplit(listTR.ToList(), taskCount);//分群組 for 多執行緒分批執行
-            //        var tasks = new Task[taskCount];
+                //    //檢查回應的伺服器狀態StatusCode是否是200 OK
+                //    if (resMessage.StatusCode == System.Net.HttpStatusCode.OK)
+                //    {
+                //        var sr = await resMessage.Content.ReadAsStringAsync();
+                //        var config = Configuration.Default;
+                //        var context = BrowsingContext.New(config);
+                //        var document = await context.OpenAsync(c => c.Content(sr));
+                //        var listTR = document.QuerySelectorAll("tr[id^=row]");     
 
-            //        for (int i = 0; i < tasks.Length; i++)
-            //        {
-            //            var groupData = group[i];
-            //            tasks[i] = Task.Run(async () =>
-            //            {
-            //                foreach (var itemTr in groupData)
-            //                {
-            //                    var td = itemTr.Children;
-            //                    //var currentData = realTimeData.Where(c => c.StockId == td[0].TextContent.Trim()).FirstOrDefault();
-            //                    //if (currentData != null)
-            //                    //{
-            //                        //網站資料來源非即時，必須把成交價更新為即時價格
-            //                        //var currentPrice = currentData?.Price ?? 0;
-            //                        decimal.TryParse(td[16].TextContent, out var highPriceInCurrentYear);
-            //                        decimal.TryParse(td[18].TextContent, out var lowPriceInCurrentYear);
-            //                        //double.TryParse(td[17].TextContent, out var highPriceInCurrentYearPercentGap);
-            //                        //double.TryParse(td[19].TextContent, out var lowPriceInCurrentYearPercentGap);
+                //        var group = TaskUtils.GroupSplit(listTR.ToList(), taskCount);//分群組 for 多執行緒分批執行
+                //        var tasks = new Task[taskCount];
 
-            //                        var data = new StockHighLowIn52WeeksInfoModel()
-            //                        {
-            //                            StockId = td[0].TextContent.Trim(),
-            //                            //Price = currentPrice,
-            //                            HighPriceInCurrentYear = /*currentPrice > highPriceInCurrentYear ? currentPrice : */highPriceInCurrentYear,//1年最高股價(元)
-            //                            //HighPriceInCurrentYearPercentGap = highPriceInCurrentYear > 0 ? Convert.ToDouble(Math.Round(((currentPrice - highPriceInCurrentYear) / highPriceInCurrentYear) * 100, 2)) : 0,//現距1年高點跌幅(%)
-            //                            LowPriceInCurrentYear = /*currentPrice < lowPriceInCurrentYear ? currentPrice : */lowPriceInCurrentYear,//1年最低股價(元)
-            //                            //LowPriceInCurrentYearPercentGap = lowPriceInCurrentYear > 0 ? Convert.ToDouble(Math.Round(((currentPrice - lowPriceInCurrentYear) / lowPriceInCurrentYear) * 100, 2)) : 0//現距1年低點漲幅(%)
-            //                        };
+                //        for (int i = 0; i < tasks.Length; i++)
+                //        {
+                //            var groupData = group[i];
+                //            tasks[i] = Task.Run(async () =>
+                //            {
+                //                foreach (var itemTr in groupData)
+                //                {
+                //                    var td = itemTr.Children;
+                //                    //var currentData = realTimeData.Where(c => c.StockId == td[0].TextContent.Trim()).FirstOrDefault();
+                //                    //if (currentData != null)
+                //                    //{
+                //                        //網站資料來源非即時，必須把成交價更新為即時價格
+                //                        //var currentPrice = currentData?.Price ?? 0;
+                //                        decimal.TryParse(td[16].TextContent, out var highPriceInCurrentYear);
+                //                        decimal.TryParse(td[18].TextContent, out var lowPriceInCurrentYear);
+                //                        //double.TryParse(td[17].TextContent, out var highPriceInCurrentYearPercentGap);
+                //                        //double.TryParse(td[19].TextContent, out var lowPriceInCurrentYearPercentGap);
 
-            //                        lock (_lock)
-            //                        {
-            //                            res.Add(data);
-            //                        }
+                //                        var data = new StockHighLowIn52WeeksInfoModel()
+                //                        {
+                //                            StockId = td[0].TextContent.Trim(),
+                //                            //Price = currentPrice,
+                //                            HighPriceInCurrentYear = /*currentPrice > highPriceInCurrentYear ? currentPrice : */highPriceInCurrentYear,//1年最高股價(元)
+                //                            //HighPriceInCurrentYearPercentGap = highPriceInCurrentYear > 0 ? Convert.ToDouble(Math.Round(((currentPrice - highPriceInCurrentYear) / highPriceInCurrentYear) * 100, 2)) : 0,//現距1年高點跌幅(%)
+                //                            LowPriceInCurrentYear = /*currentPrice < lowPriceInCurrentYear ? currentPrice : */lowPriceInCurrentYear,//1年最低股價(元)
+                //                            //LowPriceInCurrentYearPercentGap = lowPriceInCurrentYear > 0 ? Convert.ToDouble(Math.Round(((currentPrice - lowPriceInCurrentYear) / lowPriceInCurrentYear) * 100, 2)) : 0//現距1年低點漲幅(%)
+                //                        };
 
-            //                        //await Task.Delay(10);//add await for async
-            //                    //}
-            //                }
-            //            });
-            //        }
-            //        Task.WaitAll(tasks);
-            //    }
+                //                        lock (_lock)
+                //                        {
+                //                            res.Add(data);
+                //                        }
+
+                //                        //await Task.Delay(10);//add await for async
+                //                    //}
+                //                }
+                //            });
+                //        }
+                //        Task.WaitAll(tasks);
+                //    }
 
 
-            //    AppCacheUtils.Set(CacheType.PriceHighLowIn52WeeksList, res, AppCacheUtils.Expiration.Absolute, cacheExpireTime);
-            //}
+                //    AppCacheUtils.Set(CacheType.PriceHighLowIn52WeeksList, res, AppCacheUtils.Expiration.Absolute, cacheExpireTime);
+                //}
 
-            //res = (List<StockHighLowIn52WeeksInfoModel>)AppCacheUtils.Get(CacheType.PriceHighLowIn52WeeksList);
+                //res = (List<StockHighLowIn52WeeksInfoModel>)AppCacheUtils.Get(CacheType.PriceHighLowIn52WeeksList);
 
-            //return res;
-        }
+                //return res;
+            }
 
-        /// <summary>
-        /// 取得近52周最高最低價格區間內，目前價格離最高價還有多少百分比，並換算成vti係數(vti越高，表示離52周區間內最高點越近)
-        /// </summary>
-        /// <param name="highLowData">取得52周間最高 & 最低價資料(非最終成交價)</param>
-        /// <returns></returns>
-        public async Task<List<StockVtiInfoModel>> GetVTI(List<PriceInfoDto> highLowData)
+            /// <summary>
+            /// 取得近52周最高最低價格區間內，目前價格離最高價還有多少百分比，並換算成vti係數(vti越高，表示離52周區間內最高點越近)
+            /// </summary>
+            /// <param name="highLowData">取得52周間最高 & 最低價資料(非最終成交價)</param>
+            /// <returns></returns>
+            public async Task<List<StockVtiInfoModel>> GetVTI(List<PriceInfoDto> highLowData)
         {
             var res = new List<StockVtiInfoModel>();
 
