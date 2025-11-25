@@ -132,5 +132,11 @@ namespace StockBuyingHelper.Service.Interfaces
         /// <param name="taskCount">多執行緒數量</param>
         /// <returns></returns>
         public Task<List<PeInfoModel>> GetFilterPe(List<string> ids, int revenueMonthCount = 3, double pe = 20, int taskCount = 25);
+
+        /// <summary>
+        /// 取得0050清單
+        /// </summary>
+        /// <returns></returns>
+        public Task<List<string>> Get0050List();
     }
 }

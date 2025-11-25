@@ -1,6 +1,6 @@
 ﻿namespace StockBuingHelper.Web.Dtos.Request
 {
-    public class ResGetVtiDataDto
+    public class ReqGetVtiDataDto
     {
         public string queryType { get; set; } = "default";
         public string? specificStockId { get; set; }

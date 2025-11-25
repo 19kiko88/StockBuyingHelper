@@ -3,6 +3,7 @@ using System.Security.Authentication;
 using System.Text;
 using System.Text.Json;
 using AngleSharp;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SBH.Repositories.Models;
 using StockBuyingHelper.Models;
@@ -19,17 +20,20 @@ namespace StockBuyingHelper.Service.Implements
     {
         public bool IgnoreFilter { get; set; }
         private readonly object _lock = new object();
-        private readonly int cacheExpireTime = 1440;//快取保留時間
+        private readonly int cacheExpireTime = 30; //1440;//快取保留時間
         private readonly SBHContext _context;
         private readonly AppSettings.CustomizeSettings _appCustSettings;
+        private readonly ILogger<StockService> _logger;
 
         public StockService(
             SBHContext context,
-            IOptions<AppSettings.CustomizeSettings> appCustSettings
+            IOptions<AppSettings.CustomizeSettings> appCustSettings,
+            ILogger<StockService> logger
             )
         {
             _context = context;
             _appCustSettings = appCustSettings.Value;
+            _logger = logger;
         }
 
         /// <summary>
@@ -231,9 +235,13 @@ namespace StockBuyingHelper.Service.Implements
 
                 res = File.ReadAllLines(file.FullName).Skip(1).Select(c => new StockHighLowIn52WeeksInfoModel
                 {
-                    StockId = c.Split(",")[0].ToString().Replace("=", "").Replace("\"", ""),
-                    HighPriceInCurrentYear = decimal.TryParse(c.Split(",")[16].ToString().Replace("=", "").Replace("\"", ""), out var highPrice) ? highPrice : 0,
-                    LowPriceInCurrentYear = decimal.TryParse(c.Split(",")[18].ToString().Replace("=", "").Replace("\"", ""), out var lowPrice) ? lowPrice : 0,
+                    //StockId = c.Split(",")[0].ToString().Replace("=", "").Replace("\"", ""),
+                    //HighPriceInCurrentYear = decimal.TryParse(c.Split(",")[16].ToString().Replace("=", "").Replace("\"", ""), out var highPrice) ? highPrice : 0,
+                    //LowPriceInCurrentYear = decimal.TryParse(c.Split(",")[18].ToString().Replace("=", "").Replace("\"", ""), out var lowPrice) ? lowPrice : 0,
+
+                    StockId = c.Split(",")[0].ToString().Replace("\"", ""),
+                    HighPriceInCurrentYear = decimal.TryParse(c.Split(",")[1].ToString().Replace("\"", ""), out var highPrice) ? highPrice : 0,
+                    LowPriceInCurrentYear = decimal.TryParse(c.Split(",")[2].ToString().Replace("\"", ""), out var lowPrice) ? lowPrice : 0,
                 }).ToList();
 
                 AppCacheUtils.Set(CacheType.PriceHighLowIn52WeeksList, res, AppCacheUtils.Expiration.Absolute, cacheExpireTime);
@@ -315,12 +323,12 @@ namespace StockBuyingHelper.Service.Implements
                 //return res;
             }
 
-            /// <summary>
-            /// 取得近52周最高最低價格區間內，目前價格離最高價還有多少百分比，並換算成vti係數(vti越高，表示離52周區間內最高點越近)
-            /// </summary>
-            /// <param name="highLowData">取得52周間最高 & 最低價資料(非最終成交價)</param>
-            /// <returns></returns>
-            public async Task<List<StockVtiInfoModel>> GetVTI(List<PriceInfoDto> highLowData)
+        /// <summary>
+        /// 取得近52周最高最低價格區間內，目前價格離最高價還有多少百分比，並換算成vti係數(vti越高，表示離52周區間內最高點越近)
+        /// </summary>
+        /// <param name="highLowData">取得52周間最高 & 最低價資料(非最終成交價)</param>
+        /// <returns></returns>
+        public async Task<List<StockVtiInfoModel>> GetVTI(List<PriceInfoDto> highLowData)
         {
             var res = new List<StockVtiInfoModel>();
 
@@ -669,10 +677,15 @@ namespace StockBuyingHelper.Service.Implements
                             {
                                 var sr = httpClient.Send(reqest).Content.ReadAsStringAsync().Result;
                                 var document = context.OpenAsync(res => res.Content(sr)).Result;
+
+                                var peElement = document.QuerySelector("#main-0-QuoteHeader-Proxy div div:nth-child(2) div:nth-child(2) div:nth-child(2) span:nth-child(1)");
+                                var peText = peElement?.TextContent?.Trim() ?? "";
+                                var peValueStr = peText.Split(' ')[0];
+
                                 var peInfo = new PeInfoModel()
                                 {
                                     StockId = id,
-                                    Pe = double.TryParse(document.QuerySelector("#main-0-QuoteHeader-Proxy div").ChildNodes[1].ChildNodes[1].ChildNodes[1].TextContent.Split('(')[0].Trim(), out var pe) ? pe : 99999d,//取得本益比(pe)
+                                    Pe = double.TryParse(peValueStr, out var pe) ? pe : 99999d,//取得本益比(pe)
                                 };
                                 res.Add(peInfo);
                             }
@@ -862,6 +875,31 @@ namespace StockBuyingHelper.Service.Implements
                 RevenueData = c.RevenueData
             }).ToList();
               
+            return res;
+        }
+
+        public async Task<List<string>>Get0050List()
+        {
+            var res = new List<string>();
+
+            if (AppCacheUtils.IsSet(CacheType.ZeroZeroFiftyList) == false)
+            {
+                var file = Directory.GetFiles(_appCustSettings.PathSettings!.List0050Data, "*.csv")
+                    .Select(c => new FileInfo(c))
+                    .OrderByDescending(o => o.Name)
+                    .FirstOrDefault();
+                
+                var fileContent = File.ReadAllLines(file.FullName).Skip(1).ToList();//.Select(c => res.Add(c));
+                foreach (var item in fileContent)
+                {
+                    res.Add(item.ToString().Replace("\"", ""));
+                }
+
+                AppCacheUtils.Set(CacheType.ZeroZeroFiftyList, res, AppCacheUtils.Expiration.Absolute, cacheExpireTime);
+            }
+
+            res = (List<string>)AppCacheUtils.Get(CacheType.ZeroZeroFiftyList);
+
             return res;
         }
     }
