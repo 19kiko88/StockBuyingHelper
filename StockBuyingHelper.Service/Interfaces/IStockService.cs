@@ -138,5 +138,8 @@ namespace StockBuyingHelper.Service.Interfaces
         /// </summary>
         /// <returns></returns>
         public Task<List<string>> Get0050List();
+
+        public Task<List<ResRoeRoaDto>> GetRoeRoa(List<string>? ids = null, int taskCount = 25);
+        public Task<List<ResRoeRoaDto>> GetFilterRoeRoa(List<string>? ids, decimal roe = 15);
     }
 }

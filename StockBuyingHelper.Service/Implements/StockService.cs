@@ -878,7 +878,93 @@ namespace StockBuyingHelper.Service.Implements
             return res;
         }
 
-        public async Task<List<string>>Get0050List()
+        public async Task<List<ResRoeRoaDto>> GetRoeRoa(List<string>? ids = null, int taskCount = 25)
+        {
+            var res = new List<ResRoeRoaDto>();
+
+            if (ids == null)
+            {
+                ids = _context.Stock_Info.Select(c => c.Stock_Id).Distinct().ToList();
+            }
+
+            //分群組 for 多執行緒分批執行
+            var groups = TaskUtils.GroupSplit(ids, taskCount);
+            var tasks = new Task[groups.Count];
+
+            var httpClientHandler = new HttpClientHandler
+            {
+                SslProtocols = SslProtocols.Tls12 | SslProtocols.Tls13
+            };
+            var httpClient = new HttpClient(httpClientHandler);// { SslProtocols = System.Security.Authentication.SslProtocols.Tls };
+            var config = Configuration.Default;
+            var context = BrowsingContext.New(config);
+
+            for (int i = 0; i < groups.Count; i++)
+            {
+                var vtiData = groups[i];
+                tasks[i] = Task.Run(async () =>
+                {
+                    foreach (var id in vtiData)
+                    {
+                        using (HttpRequestMessage reqest = new HttpRequestMessage(HttpMethod.Get, $"https://statementdog.com/analysis/{id}/roe-roa"))
+                        {
+
+                            //加上header，避免被阻擋爬蟲
+                            reqest.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36");
+                            reqest.Headers.Add("Accept", "text/html,application/xhtml+xml,application/xml");
+
+                            var sr = httpClient.Send(reqest).Content.ReadAsStringAsync().Result;
+                            var document = context.OpenAsync(res => res.Content(sr)).Result;
+
+                            var listTR = document.QuerySelectorAll("#roe-roa table tbody tr").Skip(1);
+                            var sumROA = 0M;
+                            var sumROE = 0M;
+                            var unitData = new ResRoeRoaDto() { StockId = id };
+                            foreach (var tr in listTR)
+                            {
+                                var tds = tr.QuerySelectorAll("td");
+                                if (tds[0].TextContent == "ROA")
+                                {
+                                    decimal.TryParse(tds[1].TextContent, out var decimalROA_1);
+                                    decimal.TryParse(tds[2].TextContent, out var decimalROA_2);
+                                    decimal.TryParse(tds[3].TextContent, out var decimalROA_3);
+                                    decimal.TryParse(tds[4].TextContent, out var decimalROA_4);
+                                    unitData.SumROA = decimalROA_1 + decimalROA_2 + decimalROA_3 + decimalROA_4;
+                                }
+                                else if (tds[0].TextContent == "ROE")
+                                {
+                                    decimal.TryParse(tds[1].TextContent, out var decimalROE_1);
+                                    decimal.TryParse(tds[2].TextContent, out var decimalROE_2);
+                                    decimal.TryParse(tds[3].TextContent, out var decimalROE_3);
+                                    decimal.TryParse(tds[4].TextContent, out var decimalROE_4);
+                                    unitData.SumROE = decimalROE_1 + decimalROE_2 + decimalROE_3 + decimalROE_4;
+                                }
+                            }
+
+                            lock (_lock)
+                            {
+                                res.Add(unitData);
+                            }
+                        }
+                    }
+                });
+            }
+            Task.WaitAll(tasks);
+
+            return res;
+        }
+
+        public async Task<List<ResRoeRoaDto>> GetFilterRoeRoa(List<string>? ids, decimal roe = 15)
+        {
+            var res = GetRoeRoa(ids).Result;
+            if (!IgnoreFilter)
+            {
+                res = res.Where(c => c.SumROE >= roe).ToList();
+            }
+            return res;
+        }
+
+        public async Task<List<string>> Get0050List()
         {
             var res = new List<string>();
 
@@ -888,7 +974,7 @@ namespace StockBuyingHelper.Service.Implements
                     .Select(c => new FileInfo(c))
                     .OrderByDescending(o => o.Name)
                     .FirstOrDefault();
-                
+
                 var fileContent = File.ReadAllLines(file.FullName).Skip(1).ToList();//.Select(c => res.Add(c));
                 foreach (var item in fileContent)
                 {

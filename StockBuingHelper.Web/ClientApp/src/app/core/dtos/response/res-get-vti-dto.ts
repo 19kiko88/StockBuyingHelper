@@ -8,6 +8,7 @@ export interface ResGetVtiDto{
     epsInterval: string
     eps: number
     pe: number
+    roe: number
     revenueDatas: RevenueData[]
     volumeDatas: VolumeData[]
     vti: number

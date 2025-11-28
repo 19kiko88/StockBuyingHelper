@@ -106,6 +106,19 @@ namespace StockBuingHelper.Web.Controllers
                  * https://www.ptt.cc/bbs/Stock/M.1680899841.A.5F6.html
                  * https://www.ptt.cc/bbs/Stock/M.1468072684.A.DD1.html
                  * https://www.finlab.tw/%E4%B8%89%E7%A8%AE%E6%9C%88%E7%87%9F%E6%94%B6%E9%80%B2%E9%9A%8E%E7%9C%8B%E6%B3%95/
+                 * 
+                 * 資料來源：
+                 * GetPrice => histock
+                 * 52周高低價 => csv檔案(source：goodinfo)
+                 * GetRevenue() 營收資料 => Yahoo
+                 * GetVolume() 每日成交量資料 => Yahoo
+                 * GetEps() 近四季EPS => Yahoo
+                 * 
+                 * 排程執行：
+                 * 每日 Coravel排程 自動更新下面3項資料：Volume(成交量). Revenue(營收). Eps(近四季EPS)。分開執行，避免單次請求過多被YAHOO block
+                 * builder.Services.AddTransient<RefreshVolumeInfoTask>();
+                 * builder.Services.AddTransient<RefreshRevenueInfoTask>();
+                 * builder.Services.AddTransient<RefreshEpsInfoTask>();
                  */
                 //篩選條件：UI篩選條件
                 var listStockInfo = await _stockService.GetFilterStockInfo(reqData.queryEtfs, filterIds);
@@ -125,6 +138,7 @@ namespace StockBuingHelper.Web.Controllers
                 //篩選條件5：近四季eps > (預設)1
                 var listEps = await _stockService.GetFilterEps(reqData.epsAcc4Q.Value, _appCustSettings.OperationSystem);
 
+                //中繼篩選結果，減少查詢的股票數量，避免重複呼叫Yahoo API被block
                 filterIds =
                     (
                     from stock in listStockInfo
@@ -135,9 +149,12 @@ namespace StockBuingHelper.Web.Controllers
                     join eps in listEps on volume.StockId equals eps.StockId
                     select stock.StockId).ToList();
 
-                //篩選條件5：pe <= 20
-                var listPe = await _stockService.GetFilterPe(filterIds, 6, reqData.pe.Value);
+                //篩選條件6：pe <= 20
+                var listPe = await _stockService.GetFilterPe(filterIds, 6, reqData.pe.Value);                
                 yahooApiRequestCount += filterIds.Count;
+
+                //篩選條件7：近四季roe > 15%
+                var listRoeRoa = await _stockService.GetFilterRoeRoa(filterIds);
 
                 res.Content =
                     (
@@ -148,6 +165,7 @@ namespace StockBuingHelper.Web.Controllers
                     join volume in listVolume on revenu.StockId equals volume.StockId
                     join eps in listEps on revenu.StockId equals eps.StockId
                     join pe in listPe on revenu.StockId equals pe.StockId
+                    join roe in listRoeRoa on revenu.StockId equals roe.StockId
                     select new BuyingResultDto
                      {
                          stockId = stock.StockId,
@@ -158,7 +176,8 @@ namespace StockBuingHelper.Web.Controllers
                          epsInterval = eps.EpsAcc4QInterval,
                          eps = eps.EpsAcc4Q,
                          pe = pe.Pe,
-                         revenueDatas = revenu.RevenueData,
+                         roe = roe.SumROE,
+                        revenueDatas = revenu.RevenueData,
                          volumeDatas = volume.VolumeInfo.OrderByDescending(o => o.txDate).ToList(),
                          vti = Math.Round(vti.Vti * 100, 2),
                          //amount = vti.Amount,
