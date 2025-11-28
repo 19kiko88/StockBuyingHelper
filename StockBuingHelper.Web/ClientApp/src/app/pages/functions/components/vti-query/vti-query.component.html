@@ -89,9 +89,10 @@
                 <th pSortableColumn="price">成交價 <p-sortIcon field="price"></p-sortIcon></th>
                 <th pSortableColumn="highIn52">52周最高價 <p-sortIcon field="highIn52"></p-sortIcon></th>
                 <th pSortableColumn="lowIn52">52周最低價 <p-sortIcon field="lowIn52"></p-sortIcon></th>
-                <th pSortableColumn="epsInterval">EPS區間 <p-sortIcon field="epsInterval"></p-sortIcon></th>
-                <th pSortableColumn="eps">(近四季)EPS <p-sortIcon field="eps"></p-sortIcon></th>
+                <!-- <th pSortableColumn="epsInterval">EPS區間 <p-sortIcon field="epsInterval"></p-sortIcon></th> -->
+                <th pSortableColumn="eps">(近四季)EPS <p-sortIcon field="eps"></p-sortIcon></th>                
                 <th pSortableColumn="pe">PE <p-sortIcon field="pe"></p-sortIcon></th>
+                <th pSortableColumn="roe">(近四季)ROE加總 <p-sortIcon field="roe"></p-sortIcon></th>
                 <th pSortableColumn="vti">VTI <p-sortIcon field="vti"></p-sortIcon></th>
                 <!-- <th pSortableColumn="amount">購買數 <p-sortIcon field="amount"></p-sortIcon></th> -->
               </tr>
@@ -107,9 +108,10 @@
                 <td>{{ vtiData.price }}</td>
                 <td>{{ vtiData.highIn52 }}</td>
                 <td>{{ vtiData.lowIn52 }}</td>
-                <td>{{ vtiData.epsInterval }}</td>
+                <!-- <td>{{ vtiData.epsInterval }}</td> -->
                 <td>{{ vtiData.eps }}</td>
                 <td>{{ vtiData.pe }}</td>
+                <td>{{ vtiData.roe }}</td>
                 <td>{{ vtiData.vti }}</td>
                 <!-- <td>{{ vtiData.amount }}</td> -->
             </tr>

@@ -4,6 +4,7 @@ import { LoginComponent } from './pages/auth/components/login/login.component';
 import { authGuard } from './core/guards/auth.guard';
 import { VtiQueryComponent } from './pages/functions/components/vti-query/vti-query.component';
 import { HistoryComponent } from './pages/functions/components/history/history.component';
+import { ManualComponent } from './pages/functions/components/manual/manual.component';
 
 const routes: Routes = [  
   {
@@ -20,6 +21,11 @@ const routes: Routes = [
     canActivate : [authGuard],
     component: HistoryComponent
   },
+  {
+    path: 'manual', 
+    canActivate : [authGuard],
+    component: ManualComponent
+  },  
   {
     path: 'admin',
     canActivate : [authGuard],

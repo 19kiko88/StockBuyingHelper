@@ -3,6 +3,7 @@ using System.Security.Authentication;
 using System.Text;
 using System.Text.Json;
 using AngleSharp;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SBH.Repositories.Models;
 using StockBuyingHelper.Models;
@@ -19,17 +20,20 @@ namespace StockBuyingHelper.Service.Implements
     {
         public bool IgnoreFilter { get; set; }
         private readonly object _lock = new object();
-        private readonly int cacheExpireTime = 1440;//快取保留時間
+        private readonly int cacheExpireTime = 30; //1440;//快取保留時間
         private readonly SBHContext _context;
         private readonly AppSettings.CustomizeSettings _appCustSettings;
+        private readonly ILogger<StockService> _logger;
 
         public StockService(
             SBHContext context,
-            IOptions<AppSettings.CustomizeSettings> appCustSettings
+            IOptions<AppSettings.CustomizeSettings> appCustSettings,
+            ILogger<StockService> logger
             )
         {
             _context = context;
             _appCustSettings = appCustSettings.Value;
+            _logger = logger;
         }
 
         /// <summary>
@@ -231,9 +235,13 @@ namespace StockBuyingHelper.Service.Implements
 
                 res = File.ReadAllLines(file.FullName).Skip(1).Select(c => new StockHighLowIn52WeeksInfoModel
                 {
-                    StockId = c.Split(",")[0].ToString().Replace("=", "").Replace("\"", ""),
-                    HighPriceInCurrentYear = decimal.TryParse(c.Split(",")[16].ToString().Replace("=", "").Replace("\"", ""), out var highPrice) ? highPrice : 0,
-                    LowPriceInCurrentYear = decimal.TryParse(c.Split(",")[18].ToString().Replace("=", "").Replace("\"", ""), out var lowPrice) ? lowPrice : 0,
+                    //StockId = c.Split(",")[0].ToString().Replace("=", "").Replace("\"", ""),
+                    //HighPriceInCurrentYear = decimal.TryParse(c.Split(",")[16].ToString().Replace("=", "").Replace("\"", ""), out var highPrice) ? highPrice : 0,
+                    //LowPriceInCurrentYear = decimal.TryParse(c.Split(",")[18].ToString().Replace("=", "").Replace("\"", ""), out var lowPrice) ? lowPrice : 0,
+
+                    StockId = c.Split(",")[0].ToString().Replace("\"", ""),
+                    HighPriceInCurrentYear = decimal.TryParse(c.Split(",")[1].ToString().Replace("\"", ""), out var highPrice) ? highPrice : 0,
+                    LowPriceInCurrentYear = decimal.TryParse(c.Split(",")[2].ToString().Replace("\"", ""), out var lowPrice) ? lowPrice : 0,
                 }).ToList();
 
                 AppCacheUtils.Set(CacheType.PriceHighLowIn52WeeksList, res, AppCacheUtils.Expiration.Absolute, cacheExpireTime);
@@ -315,12 +323,12 @@ namespace StockBuyingHelper.Service.Implements
                 //return res;
             }
 
-            /// <summary>
-            /// 取得近52周最高最低價格區間內，目前價格離最高價還有多少百分比，並換算成vti係數(vti越高，表示離52周區間內最高點越近)
-            /// </summary>
-            /// <param name="highLowData">取得52周間最高 & 最低價資料(非最終成交價)</param>
-            /// <returns></returns>
-            public async Task<List<StockVtiInfoModel>> GetVTI(List<PriceInfoDto> highLowData)
+        /// <summary>
+        /// 取得近52周最高最低價格區間內，目前價格離最高價還有多少百分比，並換算成vti係數(vti越高，表示離52周區間內最高點越近)
+        /// </summary>
+        /// <param name="highLowData">取得52周間最高 & 最低價資料(非最終成交價)</param>
+        /// <returns></returns>
+        public async Task<List<StockVtiInfoModel>> GetVTI(List<PriceInfoDto> highLowData)
         {
             var res = new List<StockVtiInfoModel>();
 
@@ -669,10 +677,15 @@ namespace StockBuyingHelper.Service.Implements
                             {
                                 var sr = httpClient.Send(reqest).Content.ReadAsStringAsync().Result;
                                 var document = context.OpenAsync(res => res.Content(sr)).Result;
+
+                                var peElement = document.QuerySelector("#main-0-QuoteHeader-Proxy div div:nth-child(2) div:nth-child(2) div:nth-child(2) span:nth-child(1)");
+                                var peText = peElement?.TextContent?.Trim() ?? "";
+                                var peValueStr = peText.Split(' ')[0];
+
                                 var peInfo = new PeInfoModel()
                                 {
                                     StockId = id,
-                                    Pe = double.TryParse(document.QuerySelector("#main-0-QuoteHeader-Proxy div").ChildNodes[1].ChildNodes[1].ChildNodes[1].TextContent.Split('(')[0].Trim(), out var pe) ? pe : 99999d,//取得本益比(pe)
+                                    Pe = double.TryParse(peValueStr, out var pe) ? pe : 99999d,//取得本益比(pe)
                                 };
                                 res.Add(peInfo);
                             }
@@ -862,6 +875,117 @@ namespace StockBuyingHelper.Service.Implements
                 RevenueData = c.RevenueData
             }).ToList();
               
+            return res;
+        }
+
+        public async Task<List<ResRoeRoaDto>> GetRoeRoa(List<string>? ids = null, int taskCount = 25)
+        {
+            var res = new List<ResRoeRoaDto>();
+
+            if (ids == null)
+            {
+                ids = _context.Stock_Info.Select(c => c.Stock_Id).Distinct().ToList();
+            }
+
+            //分群組 for 多執行緒分批執行
+            var groups = TaskUtils.GroupSplit(ids, taskCount);
+            var tasks = new Task[groups.Count];
+
+            var httpClientHandler = new HttpClientHandler
+            {
+                SslProtocols = SslProtocols.Tls12 | SslProtocols.Tls13
+            };
+            var httpClient = new HttpClient(httpClientHandler);// { SslProtocols = System.Security.Authentication.SslProtocols.Tls };
+            var config = Configuration.Default;
+            var context = BrowsingContext.New(config);
+
+            for (int i = 0; i < groups.Count; i++)
+            {
+                var vtiData = groups[i];
+                tasks[i] = Task.Run(async () =>
+                {
+                    foreach (var id in vtiData)
+                    {
+                        using (HttpRequestMessage reqest = new HttpRequestMessage(HttpMethod.Get, $"https://statementdog.com/analysis/{id}/roe-roa"))
+                        {
+
+                            //加上header，避免被阻擋爬蟲
+                            reqest.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36");
+                            reqest.Headers.Add("Accept", "text/html,application/xhtml+xml,application/xml");
+
+                            var sr = httpClient.Send(reqest).Content.ReadAsStringAsync().Result;
+                            var document = context.OpenAsync(res => res.Content(sr)).Result;
+
+                            var listTR = document.QuerySelectorAll("#roe-roa table tbody tr").Skip(1);
+                            var sumROA = 0M;
+                            var sumROE = 0M;
+                            var unitData = new ResRoeRoaDto() { StockId = id };
+                            foreach (var tr in listTR)
+                            {
+                                var tds = tr.QuerySelectorAll("td");
+                                if (tds[0].TextContent == "ROA")
+                                {
+                                    decimal.TryParse(tds[1].TextContent, out var decimalROA_1);
+                                    decimal.TryParse(tds[2].TextContent, out var decimalROA_2);
+                                    decimal.TryParse(tds[3].TextContent, out var decimalROA_3);
+                                    decimal.TryParse(tds[4].TextContent, out var decimalROA_4);
+                                    unitData.SumROA = decimalROA_1 + decimalROA_2 + decimalROA_3 + decimalROA_4;
+                                }
+                                else if (tds[0].TextContent == "ROE")
+                                {
+                                    decimal.TryParse(tds[1].TextContent, out var decimalROE_1);
+                                    decimal.TryParse(tds[2].TextContent, out var decimalROE_2);
+                                    decimal.TryParse(tds[3].TextContent, out var decimalROE_3);
+                                    decimal.TryParse(tds[4].TextContent, out var decimalROE_4);
+                                    unitData.SumROE = decimalROE_1 + decimalROE_2 + decimalROE_3 + decimalROE_4;
+                                }
+                            }
+
+                            lock (_lock)
+                            {
+                                res.Add(unitData);
+                            }
+                        }
+                    }
+                });
+            }
+            Task.WaitAll(tasks);
+
+            return res;
+        }
+
+        public async Task<List<ResRoeRoaDto>> GetFilterRoeRoa(List<string>? ids, decimal roe = 15)
+        {
+            var res = GetRoeRoa(ids).Result;
+            if (!IgnoreFilter)
+            {
+                res = res.Where(c => c.SumROE >= roe).ToList();
+            }
+            return res;
+        }
+
+        public async Task<List<string>> Get0050List()
+        {
+            var res = new List<string>();
+
+            if (AppCacheUtils.IsSet(CacheType.ZeroZeroFiftyList) == false)
+            {
+                var file = Directory.GetFiles(_appCustSettings.PathSettings!.List0050Data, "*.csv")
+                    .Select(c => new FileInfo(c))
+                    .OrderByDescending(o => o.Name)
+                    .FirstOrDefault();
+
+                var fileContent = File.ReadAllLines(file.FullName).Skip(1).ToList();//.Select(c => res.Add(c));
+                foreach (var item in fileContent)
+                {
+                    res.Add(item.ToString().Replace("\"", ""));
+                }
+
+                AppCacheUtils.Set(CacheType.ZeroZeroFiftyList, res, AppCacheUtils.Expiration.Absolute, cacheExpireTime);
+            }
+
+            res = (List<string>)AppCacheUtils.Get(CacheType.ZeroZeroFiftyList);
+
             return res;
         }
     }

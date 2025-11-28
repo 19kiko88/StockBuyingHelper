@@ -2,6 +2,7 @@ import { Router } from '@angular/router';
 import { UserInfo } from '../../models/user-info';
 import { AfterViewInit, Component, Input, OnInit } from '@angular/core';
 import { JwtInfoService } from '../../services/jwt-info.service';
+import { environment } from 'src/environments/environment';
 
 @Component({
   selector: 'app-header',
@@ -11,6 +12,7 @@ import { JwtInfoService } from '../../services/jwt-info.service';
 export class HeaderComponent implements OnInit, AfterViewInit
 {
 
+  envName: string = '';
   userAccount: string = '';
   @Input() inputUserInfo : UserInfo | undefined
 
@@ -21,6 +23,7 @@ export class HeaderComponent implements OnInit, AfterViewInit
 
   ngOnInit(): void 
   {
+    this.envName = `${environment.envName}`;
     this.userAccount = this.inputUserInfo?.account ?? '';
   }
 

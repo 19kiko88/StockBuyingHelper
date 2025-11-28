@@ -35,6 +35,7 @@ namespace StockBuyingHelper.Models
     {
         public string RsaPublicKeyPem { get; set; } = string.Empty;
         public string RsaPrivateKeyPem { get; set; } = string.Empty;
-        public string HighLow52Data { get; set; } = string.Empty;        
+        public string HighLow52Data { get; set; } = string.Empty;
+        public string List0050Data { get; set; } = string.Empty;
     }
 }

@@ -4,6 +4,7 @@
 
 
 export const environment = {
+  envName: 'STG',
   production: true,
   //webSite: 'http://localhost:4201',
   //apiBaseUrl: 'https://localhost:7184/api'
