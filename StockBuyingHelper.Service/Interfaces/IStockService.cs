@@ -141,5 +141,15 @@ namespace StockBuyingHelper.Service.Interfaces
 
         public Task<List<ResRoeRoaDto>> GetRoeRoa(List<string>? ids = null, int taskCount = 25);
         public Task<List<ResRoeRoaDto>> GetFilterRoeRoa(List<string>? ids, decimal roe = 15);
+
+        /// <summary>
+        /// 從HiStock網站取得下面資料 1.近一季EPS成長率
+        /// </summary>
+        /// <param name="ids"></param>
+        /// <param name="taskCount"></param>
+        /// <returns></returns>
+        public Task<List<HiStockInfoDto>> GetHiStockData(List<string>? ids = null, int taskCount = 25);
+
+        public Task<List<HiStockInfoDto>> GetFilterHiStockData(List<string>? ids);
     }
 }

@@ -964,6 +964,78 @@ namespace StockBuyingHelper.Service.Implements
             return res;
         }
 
+        public async Task<List<HiStockInfoDto>> GetHiStockData(List<string>? ids = null, int taskCount = 25)
+        {
+            var res = new List<HiStockInfoDto>();
+
+            if (ids == null)
+            {
+                ids = _context.Stock_Info.Select(c => c.Stock_Id).Distinct().ToList();
+            }
+
+            //分群組 for 多執行緒分批執行
+            var groups = TaskUtils.GroupSplit(ids, taskCount);
+            var tasks = new Task[groups.Count];
+
+            var httpClientHandler = new HttpClientHandler
+            {
+                SslProtocols = SslProtocols.Tls12 | SslProtocols.Tls13
+            };
+            var httpClient = new HttpClient(httpClientHandler);
+            var config = Configuration.Default;
+            var context = BrowsingContext.New(config);
+
+            for (int i = 0; i < groups.Count; i++)
+            {
+                var vtiData = groups[i];
+                tasks[i] = Task.Run(async () =>
+                {
+                    foreach (var id in vtiData)
+                    {
+                        using (HttpRequestMessage reqest = new HttpRequestMessage(HttpMethod.Get, $"https://histock.tw/stock/{id}/%E6%AF%8F%E8%82%A1%E7%9B%88%E9%A4%98%E6%88%90%E9%95%B7%E7%8E%87"))
+                        {
+
+                            //加上header，避免被阻擋爬蟲
+                            reqest.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36");
+                            reqest.Headers.Add("Accept", "text/html,application/xhtml+xml,application/xml");
+
+                            var sr = httpClient.Send(reqest).Content.ReadAsStringAsync().Result;
+                            var document = context.OpenAsync(res => res.Content(sr)).Result;
+
+                            var tr = document.QuerySelectorAll("table tr").Skip(1).FirstOrDefault();
+                            var unitData = new HiStockInfoDto() { StockId = id };
+
+                            if (tr != null)
+                            {
+                                var epsGrowthQoQ = 0d;
+                                var _epsGrowthQoQ = tr.QuerySelectorAll("td").Skip(1).FirstOrDefault()?.TextContent ?? "";
+                                double.TryParse(_epsGrowthQoQ.Replace(" ", "").Replace("%", ""), out epsGrowthQoQ);
+                                unitData.EpsGrowthQoQ = epsGrowthQoQ;
+                            }
+
+                            lock (_lock)
+                            {
+                                res.Add(unitData);
+                            }
+                        }
+                    }
+                });
+            }
+            Task.WaitAll(tasks);
+
+            return res;
+        }
+
+        public async Task<List<HiStockInfoDto>> GetFilterHiStockData(List<string>? ids)
+        {
+            var res = GetHiStockData(ids).Result;
+            if (!IgnoreFilter)
+            {
+                res = res.Where(c => c.EpsGrowthQoQ > 0).ToList();
+            }
+            return res;
+        }
+
         public async Task<List<string>> Get0050List()
         {
             var res = new List<string>();

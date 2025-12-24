@@ -36,7 +36,7 @@ namespace StockBuingHelper.Web.Controllers
 
         [HttpPost]
         public async Task<Result<List<BuyingResultDto>>> GetVtiData([FromBody] ReqGetVtiDataDto reqData)
-        {          
+        {
             var sw = new Stopwatch();
             var res = new Result<List<BuyingResultDto>>();
             var yahooApiRequestCount = 0;
@@ -156,6 +156,9 @@ namespace StockBuingHelper.Web.Controllers
                 //篩選條件7：近四季roe > 15%
                 var listRoeRoa = await _stockService.GetFilterRoeRoa(filterIds);
 
+                //篩選條件8：[近一季EPS增長率要大於0%] & [當前價格 > MA20](先取消)
+                var listHiStockData = await _stockService.GetFilterHiStockData(filterIds);                
+
                 res.Content =
                     (
                     from stock in listStockInfo
@@ -166,6 +169,7 @@ namespace StockBuingHelper.Web.Controllers
                     join eps in listEps on revenu.StockId equals eps.StockId
                     join pe in listPe on revenu.StockId equals pe.StockId
                     join roe in listRoeRoa on revenu.StockId equals roe.StockId
+                    join hiStockData in listHiStockData on revenu.StockId equals hiStockData.StockId
                     select new BuyingResultDto
                      {
                          stockId = stock.StockId,
@@ -176,8 +180,10 @@ namespace StockBuingHelper.Web.Controllers
                          epsInterval = eps.EpsAcc4QInterval,
                          eps = eps.EpsAcc4Q,
                          pe = pe.Pe,
-                         roe = roe.SumROE,
-                        revenueDatas = revenu.RevenueData,
+                         roe = roe.SumROE, 
+                         //ma20 = cmMoneyData.MA20,
+                         epsGrowthQoQ = hiStockData.EpsGrowthQoQ,
+                         revenueDatas = revenu.RevenueData,
                          volumeDatas = volume.VolumeInfo.OrderByDescending(o => o.txDate).ToList(),
                          vti = Math.Round(vti.Vti * 100, 2),
                          //amount = vti.Amount,
