@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
+using Newtonsoft.Json;
 using StockBuingHelper.Web.Dtos.Request;
 using StockBuingHelper.Web.Dtos.Response;
 using StockBuyingHelper.Models;
@@ -36,7 +37,7 @@ namespace StockBuingHelper.Web.Controllers
 
         [HttpPost]
         public async Task<Result<List<BuyingResultDto>>> GetVtiData([FromBody] ReqGetVtiDataDto reqData)
-        {          
+        {
             var sw = new Stopwatch();
             var res = new Result<List<BuyingResultDto>>();
             var yahooApiRequestCount = 0;
@@ -100,6 +101,7 @@ namespace StockBuingHelper.Web.Controllers
                         filterIds = new List<string> { reqData.specificStockId };
                     }
                 }
+                _logger.LogInformation($"filterIds => {JsonConvert.SerializeObject(filterIds)}");
 
                 /*
                  * 選股條件ref：
@@ -122,21 +124,27 @@ namespace StockBuingHelper.Web.Controllers
                  */
                 //篩選條件：UI篩選條件
                 var listStockInfo = await _stockService.GetFilterStockInfo(reqData.queryEtfs, filterIds);
+                _logger.LogInformation($"listStockInfo count => {listStockInfo.Count}");
 
                 //篩選條件：股價區間，預設0~200
-                var listPrice = await _stockService.GetFilterPrice(reqData.priceLow.Value, reqData.priceHigh.Value);                
+                var listPrice = await _stockService.GetFilterPrice(reqData.priceLow.Value, reqData.priceHigh.Value);
+                _logger.LogInformation($"listPrice count => {listPrice.Count}");
 
                 //篩選條件2：vti(reqData.vtiIndex)，預設80~100
                 var listVti = await _stockService.GetFilterVTI(listPrice, reqData.vtiIndex);
+                _logger.LogInformation($"listVti count => {listVti.Count}");
 
                 //篩選條件3：營收篩選(近3個月的月營收YoY必須為正成長 && 最新的YoY必須要大於0)
                 var listRevenu = await _stockService.GetFilterRevenue(3);
+                _logger.LogInformation($"listRevenu count => {listRevenu.Count}");
 
                 //篩選條件4：查詢的交易日範圍內，平均成交量大於(預設)500
                 var listVolume = await _stockService.GetFilterVolume(reqData.volume.Value);
+                _logger.LogInformation($"listVolume count => {listVolume.Count}");
 
                 //篩選條件5：近四季eps > (預設)1
                 var listEps = await _stockService.GetFilterEps(reqData.epsAcc4Q.Value, _appCustSettings.OperationSystem);
+                _logger.LogInformation($"listEps count => {listEps.Count}");
 
                 //中繼篩選結果，減少查詢的股票數量，避免重複呼叫Yahoo API被block
                 filterIds =
@@ -152,9 +160,15 @@ namespace StockBuingHelper.Web.Controllers
                 //篩選條件6：pe <= 20
                 var listPe = await _stockService.GetFilterPe(filterIds, 6, reqData.pe.Value);                
                 yahooApiRequestCount += filterIds.Count;
+                _logger.LogInformation($"listPe count => {listPe.Count}");
 
                 //篩選條件7：近四季roe > 15%
                 var listRoeRoa = await _stockService.GetFilterRoeRoa(filterIds);
+                _logger.LogInformation($"listRoeRoa count => {listRoeRoa.Count}");
+
+                //篩選條件8：[近一季EPS增長率要大於0%] & [當前價格 > MA20](先取消)
+                var listHiStockData = await _stockService.GetFilterHiStockData(filterIds);
+                _logger.LogInformation($"listHiStockData count => {listHiStockData.Count}");
 
                 res.Content =
                     (
@@ -166,6 +180,7 @@ namespace StockBuingHelper.Web.Controllers
                     join eps in listEps on revenu.StockId equals eps.StockId
                     join pe in listPe on revenu.StockId equals pe.StockId
                     join roe in listRoeRoa on revenu.StockId equals roe.StockId
+                    join hiStockData in listHiStockData on revenu.StockId equals hiStockData.StockId
                     select new BuyingResultDto
                      {
                          stockId = stock.StockId,
@@ -176,8 +191,10 @@ namespace StockBuingHelper.Web.Controllers
                          epsInterval = eps.EpsAcc4QInterval,
                          eps = eps.EpsAcc4Q,
                          pe = pe.Pe,
-                         roe = roe.SumROE,
-                        revenueDatas = revenu.RevenueData,
+                         roe = roe.SumROE, 
+                         //ma20 = cmMoneyData.MA20,
+                         epsGrowthQoQ = hiStockData.EpsGrowthQoQ,
+                         revenueDatas = revenu.RevenueData,
                          volumeDatas = volume.VolumeInfo.OrderByDescending(o => o.txDate).ToList(),
                          vti = Math.Round(vti.Vti * 100, 2),
                          //amount = vti.Amount,

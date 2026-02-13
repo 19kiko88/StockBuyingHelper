@@ -14,6 +14,7 @@ namespace StockBuingHelper.Web.Dtos.Response
         public decimal eps { get; set; }
         public double pe { get; set; }
         public decimal roe { get; set; }
+        public double epsGrowthQoQ { get; set; }
         public List<RevenueData> revenueDatas { get; set; }
         public List<VolumeData> volumeDatas { get; set; }
         public double vti { get; set; }
