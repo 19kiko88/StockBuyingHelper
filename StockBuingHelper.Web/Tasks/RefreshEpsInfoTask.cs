@@ -27,7 +27,7 @@ namespace StockBuingHelper.Web.Tasks
             _logger.LogInformation($"Task [RefreshEpsInfo] running at: {DateTime.Now}");
             try
             {
-                _admin.RefreshEpsInfo(_appCustSettings.OperationSystem);
+                _admin.RefreshEpsInfo();
             }
             catch (Exception ex)
             {

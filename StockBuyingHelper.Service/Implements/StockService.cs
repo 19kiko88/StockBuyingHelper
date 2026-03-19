@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SBH.Repositories.Models;
 using StockBuyingHelper.Models;
+using StockBuyingHelper.Models.StaticModels;
 using StockBuyingHelper.Service.Dtos;
 using StockBuyingHelper.Service.Enums;
 using StockBuyingHelper.Service.Interfaces;
@@ -530,7 +531,7 @@ namespace StockBuyingHelper.Service.Implements
         /// <param name="data">資料來源</param>
         /// <param name="taskCount">多執行緒的Task數量</param>
         /// <returns></returns>
-        public async Task<List<EpsInfoDto>> GetEps(string Os = "Windows", int taskCount = 25)
+        public async Task<List<EpsInfoDto>> GetEps(int taskCount = 25)
         {
             var res = new List<EpsInfoDto>();
 
@@ -570,8 +571,8 @@ namespace StockBuyingHelper.Service.Implements
                                 startQuater = $"{d.AddMonths(-9).Year}Q{Convert.ToInt32(d.AddMonths(-9).Month) / 3}";
                                 endQuater = $"{d.Year}Q{Convert.ToInt32(d.Month) / 3}";
 
-                                if (Os == "Linux")
-                                {
+                                if (Environment.OSVersion.VersionString.Contains(Platform.Unix))
+                                {// Env Linux.
                                     /*
                                      * Linux的日期會自動減一天，所以要AddDays(1)回去
                                      * ex：
@@ -612,7 +613,7 @@ namespace StockBuyingHelper.Service.Implements
         /// <param name="eps">近四季EPS篩選條件</param>
         /// <param name="taskCount">多執行緒的Task數量</param>
         /// <returns></returns>
-        public async Task<List<EpsInfoDto>> GetFilterEps(decimal eps = 0, string Os = "Windows", int taskCount = 25)
+        public async Task<List<EpsInfoDto>> GetFilterEps(decimal eps = 0, int taskCount = 25)
         {
             //var res = new List<EpsInfoDto>();
             //var epsData = _context.Eps_Info.ToList();//await GetEps(taskCount, Os);
@@ -656,9 +657,6 @@ namespace StockBuyingHelper.Service.Implements
         public async Task<List<PeInfoModel>> GetPe(List<string> ids, int revenueMonthCount = 3, int taskCount = 25)
         {
             var res = new List<PeInfoModel>();
-            var config = Configuration.Default;
-            var context = BrowsingContext.New(config);
-            var httpClient = new HttpClient();
 
             //分群組 for 多執行緒分批執行
             var groups = TaskUtils.GroupSplit(ids, taskCount);
@@ -669,31 +667,74 @@ namespace StockBuyingHelper.Service.Implements
                 var vtiData = groups[i];
                 tasks[i] = Task.Run(async () =>
                 {
+                    // 每個 Task 使用獨立的 HttpClient 與 BrowsingContext
+                    var httpClientHandler = new HttpClientHandler
+                    {
+                        SslProtocols = SslProtocols.Tls12 | SslProtocols.Tls13
+                    };
+                    var httpClient = new HttpClient(httpClientHandler);
+
+                    // 加入 User-Agent，避免被識別為爬蟲
+                    httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36");
+
+                    var config = Configuration.Default;
+                    var context = BrowsingContext.New(config);
+
                     foreach (var id in vtiData)
                     {
-                        using (HttpRequestMessage reqest = new HttpRequestMessage(HttpMethod.Get, $"https://tw.stock.yahoo.com/quote/{id}.TW/revenue"))
+                        try
                         {
+                            using (HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, $"https://tw.stock.yahoo.com/quote/{id}.TW/revenue"))
+                            {
+                                var response = await httpClient.SendAsync(request);
+
+                                if (response.IsSuccessStatusCode)
+                                {
+                                    var sr = await response.Content.ReadAsStringAsync();
+                                    var document = await context.OpenAsync(res => res.Content(sr));
+
+                                    var peElement = document.QuerySelector("#main-0-QuoteHeader-Proxy div div:nth-child(2) div:nth-child(2) div:nth-child(2) span:nth-child(1)");
+                                    var peText = peElement?.TextContent?.Trim() ?? "";
+                                    var peValueStr = peText.Split(' ')[0];
+
+                                    var peInfo = new PeInfoModel()
+                                    {
+                                        StockId = id,
+                                        Pe = double.TryParse(peValueStr, out var pe) ? pe : 99999d,
+                                    };
+
+                                    lock (_lock)
+                                    {
+                                        res.Add(peInfo);
+                                    }
+                                }
+                                else
+                                {
+                                    _logger.LogWarning($"GetPe failed for {id}, StatusCode: {response.StatusCode}");
+                                    lock (_lock)
+                                    {
+                                        res.Add(new PeInfoModel() { StockId = id, Pe = 99999d });
+                                    }
+                                }
+                            }
+
+                            // 加入延遲，避免請求過快
+                            await Task.Delay(100);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError($"GetPe error for {id}: {ex.Message}");
                             lock (_lock)
                             {
-                                var sr = httpClient.Send(reqest).Content.ReadAsStringAsync().Result;
-                                var document = context.OpenAsync(res => res.Content(sr)).Result;
-
-                                var peElement = document.QuerySelector("#main-0-QuoteHeader-Proxy div div:nth-child(2) div:nth-child(2) div:nth-child(2) span:nth-child(1)");
-                                var peText = peElement?.TextContent?.Trim() ?? "";
-                                var peValueStr = peText.Split(' ')[0];
-
-                                var peInfo = new PeInfoModel()
-                                {
-                                    StockId = id,
-                                    Pe = double.TryParse(peValueStr, out var pe) ? pe : 99999d,//取得本益比(pe)
-                                };
-                                res.Add(peInfo);
+                                res.Add(new PeInfoModel() { StockId = id, Pe = 99999d });
                             }
                         }
                     }
+
+                    httpClient.Dispose();
                 });
             }
-            Task.WaitAll(tasks);
+            await Task.WhenAll(tasks);
 
             return res;
         }

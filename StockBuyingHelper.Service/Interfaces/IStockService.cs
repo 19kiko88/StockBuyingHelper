@@ -101,7 +101,7 @@ namespace StockBuyingHelper.Service.Interfaces
         /// <param name="data">資料來源</param>
         /// <param name="taskCount">多執行緒的Task數量</param>
         /// <returns></returns>
-        public Task<List<EpsInfoDto>> GetEps(string Os = "Windows", int taskCount = 25);
+        public Task<List<EpsInfoDto>> GetEps(int taskCount = 25);
 
         /// <summary>
         /// 篩選本益比(PE) & 近四季EPS
@@ -109,7 +109,7 @@ namespace StockBuyingHelper.Service.Interfaces
         /// <param name="eps">近四季EPS篩選條件</param>
         /// <param name="taskCount">多執行緒的Task數量</param>
         /// <returns></returns>
-        public Task<List<EpsInfoDto>> GetFilterEps(decimal eps = 0, string Os = "Windows", int taskCount = 25);
+        public Task<List<EpsInfoDto>> GetFilterEps(decimal eps = 0, int taskCount = 25);
 
         public Task<List<RevenueInfoModel>> GetRevenue(List<string>? ids = null, int revenueMonthCount = 3, int taskCount = 25);
 

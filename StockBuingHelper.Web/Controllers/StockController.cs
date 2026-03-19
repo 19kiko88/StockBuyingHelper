@@ -143,7 +143,7 @@ namespace StockBuingHelper.Web.Controllers
                 _logger.LogInformation($"listVolume count => {listVolume.Count}");
 
                 //篩選條件5：近四季eps > (預設)1
-                var listEps = await _stockService.GetFilterEps(reqData.epsAcc4Q.Value, _appCustSettings.OperationSystem);
+                var listEps = await _stockService.GetFilterEps(reqData.epsAcc4Q.Value);
                 _logger.LogInformation($"listEps count => {listEps.Count}");
 
                 //中繼篩選結果，減少查詢的股票數量，避免重複呼叫Yahoo API被block
