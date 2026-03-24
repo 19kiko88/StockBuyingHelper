@@ -432,4 +432,7 @@ ignore_files
 /StockBuingHelper.Web/appsettings.json
 /StockBuingHelper.Web/appsettings.Production.json
 /StockBuingHelper.Web/Keys/sbh.key.pem
+/StockBuingHelper.Web/appsettings.Development.json
+/StockBuingHelper.Web/appsettings.Stg.json
+/StockBuingHelper.Web/appsettings.Prd.json
 Contents
