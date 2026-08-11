@@ -1,0 +1,9 @@
+sudo systemctl disable SBH_STG.service(X)
+sudo systemctl stop SBH_STG.service(X)
+sudo systemctl restart SBH_STG.service(V)
+
+sudo systemctl enable SBH_STG.service(X)
+sudo systemctl start SBH_STG.service(X)
+sudo systemctl status SBH_STG.service(V)
+
+sudo nginx -s reload(V)

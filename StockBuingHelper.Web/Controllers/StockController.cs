@@ -143,22 +143,43 @@ namespace StockBuingHelper.Web.Controllers
                 _logger.LogInformation($"listVolume count => {listVolume.Count}");
 
                 //篩選條件5：近四季eps > (預設)1
-                var listEps = await _stockService.GetFilterEps(reqData.epsAcc4Q.Value, _appCustSettings.OperationSystem);
+                var listEps = await _stockService.GetFilterEps(reqData.epsAcc4Q.Value);
                 _logger.LogInformation($"listEps count => {listEps.Count}");
 
                 //中繼篩選結果，減少查詢的股票數量，避免重複呼叫Yahoo API被block
-                filterIds =
-                    (
-                    from stock in listStockInfo
-                    join price in listPrice on stock.StockId equals price.StockId
-                    join vti in listVti on price.StockId equals vti.StockId
-                    join revenu in listRevenu on vti.StockId equals revenu.StockId
-                    join volume in listVolume on revenu.StockId equals volume.StockId
-                    join eps in listEps on volume.StockId equals eps.StockId
-                    select stock.StockId).ToList();
+                //注意：IgnoreFilter=true(0050 / 指定股票代碼)時，改用left join，避免任一資料來源缺少該股票資料時被join排除，造成最終結果數量比filterIds少
+                if (_stockService.IgnoreFilter)
+                {
+                    filterIds =
+                        (
+                        from stock in listStockInfo
+                        join price in listPrice on stock.StockId equals price.StockId into priceJoin
+                        from price in priceJoin.DefaultIfEmpty()
+                        join vti in listVti on stock.StockId equals vti.StockId into vtiJoin
+                        from vti in vtiJoin.DefaultIfEmpty()
+                        join revenu in listRevenu on stock.StockId equals revenu.StockId into revenuJoin
+                        from revenu in revenuJoin.DefaultIfEmpty()
+                        join volume in listVolume on stock.StockId equals volume.StockId into volumeJoin
+                        from volume in volumeJoin.DefaultIfEmpty()
+                        join eps in listEps on stock.StockId equals eps.StockId into epsJoin
+                        from eps in epsJoin.DefaultIfEmpty()
+                        select stock.StockId).ToList();
+                }
+                else
+                {
+                    filterIds =
+                        (
+                        from stock in listStockInfo
+                        join price in listPrice on stock.StockId equals price.StockId
+                        join vti in listVti on price.StockId equals vti.StockId
+                        join revenu in listRevenu on vti.StockId equals revenu.StockId
+                        join volume in listVolume on revenu.StockId equals volume.StockId
+                        join eps in listEps on volume.StockId equals eps.StockId
+                        select stock.StockId).ToList();
+                }
 
                 //篩選條件6：pe <= 20
-                var listPe = await _stockService.GetFilterPe(filterIds, 6, reqData.pe.Value);                
+                var listPe = await _stockService.GetFilterPe(filterIds, 6, reqData.pe.Value);
                 yahooApiRequestCount += filterIds.Count;
                 _logger.LogInformation($"listPe count => {listPe.Count}");
 
@@ -170,39 +191,87 @@ namespace StockBuingHelper.Web.Controllers
                 var listHiStockData = await _stockService.GetFilterHiStockData(filterIds);
                 _logger.LogInformation($"listHiStockData count => {listHiStockData.Count}");
 
-                res.Content =
-                    (
-                    from stock in listStockInfo
-                    join price in listPrice on stock.StockId equals price.StockId
-                    join vti in listVti on price.StockId equals vti.StockId
-                    join revenu in listRevenu on vti.StockId equals revenu.StockId
-                    join volume in listVolume on revenu.StockId equals volume.StockId
-                    join eps in listEps on revenu.StockId equals eps.StockId
-                    join pe in listPe on revenu.StockId equals pe.StockId
-                    join roe in listRoeRoa on revenu.StockId equals roe.StockId
-                    join hiStockData in listHiStockData on revenu.StockId equals hiStockData.StockId
-                    select new BuyingResultDto
-                     {
-                         stockId = stock.StockId,
-                         stockName = stock.StockName,
-                         price = price.Price,
-                         highIn52 = price.HighPriceInCurrentYear,
-                         lowIn52 = price.LowPriceInCurrentYear,
-                         epsInterval = eps.EpsAcc4QInterval,
-                         eps = eps.EpsAcc4Q,
-                         pe = pe.Pe,
-                         roe = roe.SumROE, 
-                         //ma20 = cmMoneyData.MA20,
-                         epsGrowthQoQ = hiStockData.EpsGrowthQoQ,
-                         revenueDatas = revenu.RevenueData,
-                         volumeDatas = volume.VolumeInfo.OrderByDescending(o => o.txDate).ToList(),
-                         vti = Math.Round(vti.Vti * 100, 2),
-                         //amount = vti.Amount,
-                         cfiCode = stock.CFICode
-                     }
-                    )
-                    .OrderByDescending(o => o.cfiCode).ThenByDescending(o => o.eps).ThenByDescending(o => o.amount)
-                    .ToList();
+                if (_stockService.IgnoreFilter)
+                {
+                    //IgnoreFilter=true：以listStockInfo(即filterIds)為主體，用left join合併其餘資料，缺資料的欄位補預設值，確保結果數量與filterIds一致
+                    res.Content =
+                        (
+                        from stock in listStockInfo
+                        join price in listPrice on stock.StockId equals price.StockId into priceJoin
+                        from price in priceJoin.DefaultIfEmpty()
+                        join vti in listVti on stock.StockId equals vti.StockId into vtiJoin
+                        from vti in vtiJoin.DefaultIfEmpty()
+                        join revenu in listRevenu on stock.StockId equals revenu.StockId into revenuJoin
+                        from revenu in revenuJoin.DefaultIfEmpty()
+                        join volume in listVolume on stock.StockId equals volume.StockId into volumeJoin
+                        from volume in volumeJoin.DefaultIfEmpty()
+                        join eps in listEps on stock.StockId equals eps.StockId into epsJoin
+                        from eps in epsJoin.DefaultIfEmpty()
+                        join pe in listPe on stock.StockId equals pe.StockId into peJoin
+                        from pe in peJoin.DefaultIfEmpty()
+                        join roe in listRoeRoa on stock.StockId equals roe.StockId into roeJoin
+                        from roe in roeJoin.DefaultIfEmpty()
+                        join hiStockData in listHiStockData on stock.StockId equals hiStockData.StockId into hiStockJoin
+                        from hiStockData in hiStockJoin.DefaultIfEmpty()
+                        select new BuyingResultDto
+                         {
+                             stockId = stock.StockId,
+                             stockName = stock.StockName,
+                             price = price?.Price ?? 0,
+                             highIn52 = price?.HighPriceInCurrentYear ?? 0,
+                             lowIn52 = price?.LowPriceInCurrentYear ?? 0,
+                             epsInterval = eps?.EpsAcc4QInterval ?? string.Empty,
+                             eps = eps?.EpsAcc4Q ?? 0,
+                             pe = pe?.Pe ?? 0,
+                             roe = roe?.SumROE ?? 0,
+                             //ma20 = cmMoneyData.MA20,
+                             epsGrowthQoQ = hiStockData?.EpsGrowthQoQ ?? 0,
+                             revenueDatas = revenu?.RevenueData ?? new List<RevenueData>(),
+                             volumeDatas = volume?.VolumeInfo?.OrderByDescending(o => o.txDate).ToList() ?? new List<VolumeData>(),
+                             vti = vti != null ? Math.Round(vti.Vti * 100, 2) : 0,
+                             //amount = vti.Amount,
+                             cfiCode = stock.CFICode
+                         }
+                        )
+                        .OrderByDescending(o => o.cfiCode).ThenByDescending(o => o.eps).ThenByDescending(o => o.amount)
+                        .ToList();
+                }
+                else
+                {
+                    res.Content =
+                        (
+                        from stock in listStockInfo
+                        join price in listPrice on stock.StockId equals price.StockId
+                        join vti in listVti on price.StockId equals vti.StockId
+                        join revenu in listRevenu on vti.StockId equals revenu.StockId
+                        join volume in listVolume on revenu.StockId equals volume.StockId
+                        join eps in listEps on revenu.StockId equals eps.StockId
+                        join pe in listPe on revenu.StockId equals pe.StockId
+                        join roe in listRoeRoa on revenu.StockId equals roe.StockId
+                        join hiStockData in listHiStockData on revenu.StockId equals hiStockData.StockId
+                        select new BuyingResultDto
+                         {
+                             stockId = stock.StockId,
+                             stockName = stock.StockName,
+                             price = price.Price,
+                             highIn52 = price.HighPriceInCurrentYear,
+                             lowIn52 = price.LowPriceInCurrentYear,
+                             epsInterval = eps.EpsAcc4QInterval,
+                             eps = eps.EpsAcc4Q,
+                             pe = pe.Pe,
+                             roe = roe.SumROE,
+                             //ma20 = cmMoneyData.MA20,
+                             epsGrowthQoQ = hiStockData.EpsGrowthQoQ,
+                             revenueDatas = revenu.RevenueData,
+                             volumeDatas = volume.VolumeInfo.OrderByDescending(o => o.txDate).ToList(),
+                             vti = Math.Round(vti.Vti * 100, 2),
+                             //amount = vti.Amount,
+                             cfiCode = stock.CFICode
+                         }
+                        )
+                        .OrderByDescending(o => o.cfiCode).ThenByDescending(o => o.eps).ThenByDescending(o => o.amount)
+                        .ToList();
+                }
 
                 var idx = 0;
                 foreach (var item in res.Content)

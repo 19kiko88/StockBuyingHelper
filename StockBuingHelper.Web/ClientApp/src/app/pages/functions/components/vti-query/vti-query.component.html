@@ -78,8 +78,8 @@
   
   <div class="card">
     <div  style="padding:20px;">
-      
-      <p-table [value]="vtiRes" styleClass="p-datatable-gridlines" dataKey="stockId" [tableStyle]="{ 'min-width': '60rem' }">
+
+      <p-table [value]="vtiRes" styleClass="p-datatable-gridlines" dataKey="stockId" [tableStyle]="{ 'min-width': '60rem' }" [scrollable]="true" scrollHeight="60vh">
         <ng-template pTemplate="header">
             <tr>
                 <th style="width: 5rem"></th>

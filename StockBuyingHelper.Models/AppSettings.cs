@@ -25,9 +25,8 @@ namespace StockBuyingHelper.Models
 
         public class CustomizeSettings
         {
-            public string OperationSystem { get; set; } = string.Empty;
+            //public string OperationSystem { get; set; } = string.Empty;
             public PathSettings? PathSettings { get; set; }
-            public List<string>? List0050 { get; set; }
         }
     }
 

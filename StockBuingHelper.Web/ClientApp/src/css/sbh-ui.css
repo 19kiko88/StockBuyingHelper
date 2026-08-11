@@ -35,9 +35,9 @@ article, aside, details, figcaption, figure, footer, header, hgroup, menu, nav, 
 /*****article scope start*****/
 article {
     position: relative;
-    min-height: calc(100vh - 80px);        
-    margin-top: 10px !important;    
-    padding-bottom: 50px !important;
+    min-height: calc(100vh - 80px);
+    margin-top: 10px !important;
+    padding-bottom: 60px !important;
     background-color: #d2e7ef;
 }
 
@@ -155,7 +155,26 @@ section.panel-article .panel-body {
 
 /*****article scope end*****/
 
-.brand 
+.brand
 {
     width: 270px !important;
 }
+
+/*****fixed footer start*****/
+.app-fixed-footer {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1035;
+    height: 40px;
+    display: flex;
+    align-items: center;
+}
+
+@media (min-width: 992px) {
+    .app-fixed-footer {
+        left: 225px;
+    }
+}
+/*****fixed footer end*****/

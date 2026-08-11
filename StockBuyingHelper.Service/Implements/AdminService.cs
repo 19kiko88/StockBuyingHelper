@@ -115,10 +115,10 @@ namespace StockBuyingHelper.Service.Implements
             _context.BulkInsert(data);
         }
 
-        public async Task RefreshEpsInfo(string Os = "Windows")
+        public async Task RefreshEpsInfo()
         {
             await TruncateTable("Eps_Info");
-            var epsData = await _stockService.GetEps(Os);
+            var epsData = await _stockService.GetEps();
             var data = new List<Eps_Info>();
 
             foreach (var item in epsData)

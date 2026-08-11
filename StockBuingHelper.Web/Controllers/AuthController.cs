@@ -22,14 +22,17 @@ namespace StockBuingHelper.Web.Controllers
     {
         private readonly AppSettings.JwtSettings _jwt;
         private readonly IAuthService _loginService;
+        private readonly ILogger<AuthController> _logger;
 
         public AuthController(
             IAuthService loginService,
-            IOptions<AppSettings.JwtSettings> jwt
+            IOptions<AppSettings.JwtSettings> jwt,
+            ILogger<AuthController> logger
             )
         {
             _loginService = loginService;
             _jwt = jwt.Value;
+            _logger = logger;
         }
 
         [HttpPost]
@@ -47,6 +50,8 @@ namespace StockBuingHelper.Web.Controllers
             {
                 res.Content = jwt.jwtToken;
                 res.Success = true;
+
+                _logger.LogInformation($"Login success(Platform：{Environment.OSVersion.Platform})");
             }
 
 
