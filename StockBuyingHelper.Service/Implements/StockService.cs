@@ -947,46 +947,85 @@ namespace StockBuyingHelper.Service.Implements
                 {
                     foreach (var id in vtiData)
                     {
-                        using (HttpRequestMessage reqest = new HttpRequestMessage(HttpMethod.Get, $"https://statementdog.com/analysis/{id}/roe-roa"))
+                        var resMessage = await httpClient.GetAsync($"https://histock.tw/stock/{id}/%E6%9D%9C%E9%82%A6%E5%88%86%E6%9E%90");
+                        //檢查回應的伺服器狀態StatusCode是否是200 OK
+                        if (resMessage.StatusCode == System.Net.HttpStatusCode.OK)
                         {
+                            var sr = await resMessage.Content.ReadAsStringAsync();
+                            var config = Configuration.Default;
+                            var context = BrowsingContext.New(config);
+                            var document = await context.OpenAsync(res => res.Content(sr));
 
-                            //加上header，避免被阻擋爬蟲
-                            reqest.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36");
-                            reqest.Headers.Add("Accept", "text/html,application/xhtml+xml,application/xml");
+                            var data = document.QuerySelectorAll("#CPHB1_ctl00_gv tr").ToList();//.Skip(1).Take(4);
+                            var listTR = data.Skip(1).Take(4);
+                            decimal total = 0m;
 
-                            var sr = httpClient.Send(reqest).Content.ReadAsStringAsync().Result;
-                            var document = context.OpenAsync(res => res.Content(sr)).Result;
-
-                            var listTR = document.QuerySelectorAll("#roe-roa table tbody tr").Skip(1);
-                            var sumROA = 0M;
-                            var sumROE = 0M;
-                            var unitData = new ResRoeRoaDto() { StockId = id };
                             foreach (var tr in listTR)
                             {
                                 var tds = tr.QuerySelectorAll("td");
-                                if (tds[0].TextContent == "ROA")
+                                if (tds.Length < 2)
                                 {
-                                    decimal.TryParse(tds[1].TextContent, out var decimalROA_1);
-                                    decimal.TryParse(tds[2].TextContent, out var decimalROA_2);
-                                    decimal.TryParse(tds[3].TextContent, out var decimalROA_3);
-                                    decimal.TryParse(tds[4].TextContent, out var decimalROA_4);
-                                    unitData.SumROA = decimalROA_1 + decimalROA_2 + decimalROA_3 + decimalROA_4;
+                                    continue;
                                 }
-                                else if (tds[0].TextContent == "ROE")
+
+                                var secondTdText = tds[1].TextContent.Trim().Replace("%", "");
+                                if (decimal.TryParse(secondTdText, out var value))
                                 {
-                                    decimal.TryParse(tds[1].TextContent, out var decimalROE_1);
-                                    decimal.TryParse(tds[2].TextContent, out var decimalROE_2);
-                                    decimal.TryParse(tds[3].TextContent, out var decimalROE_3);
-                                    decimal.TryParse(tds[4].TextContent, out var decimalROE_4);
-                                    unitData.SumROE = decimalROE_1 + decimalROE_2 + decimalROE_3 + decimalROE_4;
+                                    total += value;
                                 }
                             }
+
+                            // total 就是每個 TR 的第 2 個 td 加總結果
+                            var sumROE = total;
+
+                            var unitData = new ResRoeRoaDto() { StockId = id, SumROE = sumROE };
 
                             lock (_lock)
                             {
                                 res.Add(unitData);
                             }
                         }
+
+
+                        //using (HttpRequestMessage reqest = new HttpRequestMessage(HttpMethod.Get, url.Replace("@id", id)))
+                        //{
+
+                        //    //加上header，避免被阻擋爬蟲
+                        //    reqest.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36");
+                        //    reqest.Headers.Add("Accept", "text/html,application/xhtml+xml,application/xml");
+
+                        //    var sr = httpClient.Send(reqest).Content.ReadAsStringAsync().Result;
+                        //    var document = context.OpenAsync(res => res.Content(sr)).Result;
+
+                        //    var listTR = document.QuerySelectorAll("#CPHB1_ctl00_gv tr:not(:has(th))").Skip(1).Take(4);
+
+                        //    decimal total = 0m;
+
+                        //    foreach (var tr in listTR)
+                        //    {
+                        //        var tds = tr.QuerySelectorAll("td");
+                        //        if (tds.Length < 2)
+                        //        {
+                        //            continue;
+                        //        }
+
+                        //        var secondTdText = tds[1].TextContent.Trim();
+                        //        if (decimal.TryParse(secondTdText, out var value))
+                        //        {
+                        //            total += value;
+                        //        }
+                        //    }
+
+                        //    // total 就是每個 TR 的第 2 個 td 加總結果
+                        //    var sumROE = total;
+
+                        //    var unitData = new ResRoeRoaDto() { StockId = id, SumROE = sumROE };
+
+                        //    lock (_lock)
+                        //    {
+                        //        res.Add(unitData);
+                        //    }
+                        //}
                     }
                 });
             }
