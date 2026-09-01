@@ -115,10 +115,27 @@ namespace StockBuyingHelper.Service.Implements
             _context.BulkInsert(data);
         }
 
-        public async Task RefreshEpsInfo()
+        public async Task RefreshEpsInfo(bool isManual = false)
         {
-            await TruncateTable("Eps_Info");
-            var epsData = await _stockService.GetEps();
+            List<EpsInfoDto> epsData;
+            if (isManual)
+            {
+                //手動執行：不受批次筆數限制，執行前一律清空重新抓取
+                await TruncateTable("Eps_Info");
+                epsData = await _stockService.GetEps(2000);
+            }
+            else
+            {
+                //排程執行：只在當天第一次執行時清空，同一天內的後續排程改用累加寫入，讓GetEps可以排除當天已抓取的id
+                var hasTodayData = _context.Eps_Info.Any(c => c.Update_Date_Time.Date == DateTime.Now.Date);
+                if (!hasTodayData)
+                {
+                    await TruncateTable("Eps_Info");
+                }
+
+                epsData = await _stockService.GetEps();
+            }
+
             var data = new List<Eps_Info>();
 
             foreach (var item in epsData)
@@ -131,6 +148,7 @@ namespace StockBuyingHelper.Service.Implements
                         Eps_Acc_4Q = item.EpsAcc4Q,
                         Eps_Acc_4Q_Interval_Start = item.EpsAcc4QInterval.IndexOf("~") > 0 ? item.EpsAcc4QInterval.Split('~')[0] : "",
                         Eps_Acc_4Q_Interval_End = item.EpsAcc4QInterval.IndexOf("~") > 0 ? item.EpsAcc4QInterval.Split('~')[1] : "",
+                        Update_Date_Time = DateTime.Now,
                     });
                 }
                 catch (Exception ex)

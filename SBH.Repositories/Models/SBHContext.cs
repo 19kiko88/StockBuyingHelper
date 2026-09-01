@@ -37,6 +37,7 @@ public partial class SBHContext : DbContext
             entity.Property(e => e.Eps_Acc_4Q).HasColumnType("money");
             entity.Property(e => e.Eps_Acc_4Q_Interval_End).HasMaxLength(8);
             entity.Property(e => e.Eps_Acc_4Q_Interval_Start).HasMaxLength(8);
+            entity.Property(e => e.Update_Date_Time).HasColumnType("datetime");
         });
 
         modelBuilder.Entity<History>(entity =>

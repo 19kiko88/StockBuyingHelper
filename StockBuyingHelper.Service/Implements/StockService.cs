@@ -529,14 +529,17 @@ namespace StockBuyingHelper.Service.Implements
         /// 本益比驗證：https://www.cmoney.tw/forum/stock/1256
         /// </summary>
         /// <param name="data">資料來源</param>
+        /// <param name="batchSize">單次執行筆數上限，避免一次呼叫過多次外部資源而超過連線限制</param>
         /// <param name="taskCount">多執行緒的Task數量</param>
         /// <returns></returns>
-        public async Task<List<EpsInfoDto>> GetEps(int taskCount = 25)
+        public async Task<List<EpsInfoDto>> GetEps(int batchSize = 400, int taskCount = 25)
         {
             var res = new List<EpsInfoDto>();
 
             //分群組 for 多執行緒分批執行
-            var ids = _context.Stock_Info.Select(c => c.Stock_Id).Distinct().ToList();
+            var existIds = _context.Eps_Info.Select(c => c.Stock_Id).ToList();
+            var ids = _context.Stock_Info.Select(c => c.Stock_Id).Distinct().ToList()
+                .Except(existIds).Take(batchSize).ToList();
             var groups = TaskUtils.GroupSplit(ids, taskCount);
             var tasks = new Task[groups.Count];
 

@@ -99,9 +99,10 @@ namespace StockBuyingHelper.Service.Interfaces
         /// 本益比驗證：https://www.cmoney.tw/forum/stock/1256
         /// </summary>
         /// <param name="data">資料來源</param>
+        /// <param name="batchSize">單次執行筆數上限，避免一次呼叫過多次外部資源而超過連線限制</param>
         /// <param name="taskCount">多執行緒的Task數量</param>
         /// <returns></returns>
-        public Task<List<EpsInfoDto>> GetEps(int taskCount = 25);
+        public Task<List<EpsInfoDto>> GetEps(int batchSize = 400, int taskCount = 25);
 
         /// <summary>
         /// 篩選本益比(PE) & 近四季EPS

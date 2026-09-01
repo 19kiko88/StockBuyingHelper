@@ -163,7 +163,11 @@ provider.UseScheduler(scheduler =>
     //Crontab格式： https://hyak4j.github.io/2021_11_26_linuxcrontab/
     scheduler.Schedule<RefreshVolumeInfoTask>().Cron("0 10 * * *");//UTC時間要減8小時(10:00(UTC) = 18:00(UTC+8))
     scheduler.Schedule<RefreshRevenueInfoTask>().Cron("30 18 * * *");//UTC時間要減8小時(18:30(UTC) = 02:30(UTC+8))
+    //預估最多1200筆資料，GetEps每次執行400筆，故分4次排程，間隔1小時，避免一次呼叫過多次外部資源而超過連線限制
     scheduler.Schedule<RefreshEpsInfoTask>().Cron("30 19 * * *");//UTC時間要減8小時(19:30(UTC) = 03:30(UTC+8))
+    scheduler.Schedule<RefreshEpsInfoTask>().Cron("30 20 * * *");//UTC時間要減8小時(20:30(UTC) = 04:30(UTC+8))
+    scheduler.Schedule<RefreshEpsInfoTask>().Cron("30 21 * * *");//UTC時間要減8小時(21:30(UTC) = 05:30(UTC+8))
+    scheduler.Schedule<RefreshEpsInfoTask>().Cron("30 22 * * *");//UTC時間要減8小時(22:30(UTC) = 06:30(UTC+8))
 });
 
 // Configure the HTTP request pipeline.

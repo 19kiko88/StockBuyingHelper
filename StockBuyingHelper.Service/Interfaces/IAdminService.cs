@@ -13,7 +13,7 @@ namespace StockBuyingHelper.Service.Interfaces
         public Task RefreshStockList();
         public Task RefreshRevenueInfo();
         public Task RefreshVolumeInfo();
-        public Task RefreshEpsInfo();
+        public Task RefreshEpsInfo(bool isManual = false);
         public Task<List<HistoryInfoDto>> GetHistory();
     }
 }

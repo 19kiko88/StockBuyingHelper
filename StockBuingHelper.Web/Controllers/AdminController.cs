@@ -75,7 +75,7 @@ namespace StockBuingHelper.Web.Controllers
         [Authorize(Roles = "Admin")]
         public async Task RefreshEpsInfo()
         {
-            await _admin.RefreshEpsInfo();
+            await _admin.RefreshEpsInfo(true);
         }
 
         [HttpGet]

@@ -14,4 +14,6 @@ public partial class Eps_Info
     public string Eps_Acc_4Q_Interval_Start { get; set; }
 
     public string Eps_Acc_4Q_Interval_End { get; set; }
+
+    public DateTime Update_Date_Time { get; set; }
 }
