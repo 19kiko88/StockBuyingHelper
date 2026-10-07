@@ -436,3 +436,6 @@ ignore_files
 /StockBuingHelper.Web/appsettings.Stg.json
 /StockBuingHelper.Web/appsettings.Prd.json
 Contents
+
+# StockBuyingHelper.Jobs local SQLite data
+StockBuyingHelper.Jobs/*.db
