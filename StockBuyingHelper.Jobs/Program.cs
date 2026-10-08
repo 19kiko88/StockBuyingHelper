@@ -2,8 +2,7 @@ using Microsoft.Extensions.Configuration;
 using Serilog;
 using StockBuyingHelper.Jobs.Data;
 using StockBuyingHelper.Jobs.Runners;
-using StockBuyingHelper.Jobs.Twse;
-using StockBuyingHelper.Jobs.Upload;
+using StockBuyingHelper.Jobs.Clients;
 
 var configuration = new ConfigurationBuilder()
     .SetBasePath(AppContext.BaseDirectory)
@@ -14,7 +13,7 @@ var dbPath = configuration["DbPath"] ?? "stock.db";
 var baseUrl = configuration["BaseUrl"] ?? throw new InvalidOperationException("缺少 BaseUrl 設定");
 var requestDelaySeconds = configuration.GetValue<int?>("RequestDelaySeconds") ?? 5;
 var backfillDays = configuration.GetValue<int?>("BackfillDays") ?? 380;
-var uploadUrl = configuration["UploadUrl"];
+var vpsBaseUrl = configuration["VpsBaseUrl"];
 var retainTradingDays = configuration.GetValue<int?>("RetainTradingDays") ?? PriceDatabase.MinRetainTradingDays;
 
 Log.Logger = new LoggerConfiguration()
@@ -42,19 +41,22 @@ try
     var database = new PriceDatabase(Path.Combine(AppContext.BaseDirectory, dbPath));
     database.EnsureSchema();
 
-    switch (mode)
+    var uploader = new VpsUploader(httpClient, vpsBaseUrl);
+
+    var jobs = new Dictionary<string, Func<IJob>>
     {
-        case "daily":
-            await new DailyRunner(client, database, new HighLow52Uploader(httpClient, uploadUrl), retainTradingDays).RunAsync();
-            break;
-        case "backfill":
-            await new BackfillRunner(client, database, backfillDays, TimeSpan.FromSeconds(requestDelaySeconds), retainTradingDays).RunAsync();
-            break;
-        default:
-            Log.Error("未知的 --mode 參數: {Mode},可用值為 daily 或 backfill", mode);
-            return 1;
+        ["daily"] = () => new DailyRunner(client, database, uploader, retainTradingDays),
+        ["backfill"] = () => new BackfillRunner(client, database, backfillDays, TimeSpan.FromSeconds(requestDelaySeconds), retainTradingDays),
+        ["ETF0050"] = () => new Get0050ListRunner(uploader),
+    };
+
+    if (!jobs.TryGetValue(mode, out var createJob))
+    {
+        Log.Error("未知的 --mode 參數: {Mode},可用值為 {Modes}", mode, string.Join("、", jobs.Keys));
+        return 1;
     }
 
+    await createJob().RunAsync();
     return 0;
 }
 catch (Exception ex)

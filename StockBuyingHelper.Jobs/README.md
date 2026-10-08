@@ -23,11 +23,23 @@ DailyPrices(Code TEXT, TradeDate TEXT, HighPrice REAL, LowPrice REAL, PRIMARY KE
 | `RequestDelaySeconds` | 回補模式下,每次打 API 之間的間隔秒數(避免被證交所暫時封鎖 IP) | `5` |
 | `BackfillDays` | 回補模式往回抓的日曆天數 | `380` |
 | `RetainTradingDays` | 資料庫保留最近幾個交易日,更早的整批刪除。**不可小於 250**,否則程式拒絕執行(避免 52 週高低價被低估) | `250` |
-| `UploadUrl` | `--mode daily` 寫入資料後,把 52 週高低價 POST 到 VPS 上 `Stock/SaveHighLow52ToCsv` 的完整網址;留空則略過上傳 | 空 |
+| `VpsBaseUrl` | VPS 上 Web API 的 base URL(例如 `http://主機/SBH_Stg/api/Stock`),各任務會接上各自的 endpoint;留空則略過上傳 | 空 |
+
+## 可用的 `--mode`
+
+| mode | 說明 |
+|---|---|
+| `daily` | 抓當日行情、寫入 SQLite、清理舊資料,並把 52 週高低價 POST 到 `{VpsBaseUrl}/SaveHighLow52ToCsv`(預設) |
+| `backfill` | 一次性回補歷史資料 |
+| `ETF0050` | 用 Selenium 抓 0050 成分股清單,POST 到 `{VpsBaseUrl}/Save0050List`(需要本機有 Chrome) |
+
+新增任務:實作 `IJob`,並在 `Program.cs` 的 `jobs` 字典加一行。
+
+上傳由 `VpsUploader` 統一處理:沒有資料或沒設定 `VpsBaseUrl` 時只記 log 不上傳;
+HTTP 回應不是成功時會丟例外、以非 0 結束碼結束,資料仍留在 SQLite,下次執行會重新上傳。
 
 `--mode daily` 寫入當日資料後,會用 SQLite 算出每檔股票近 52 週(364 天)的最高/最低價,
-以 JSON 上傳給 Web 的 `SaveHighLow52ToCsv`(Web 讀取最新的 CSV)。沒有資料或沒設定
-`UploadUrl` 時只記 log 不上傳;上傳失敗會以非 0 結束碼結束,下次執行會重新上傳。
+以 JSON 上傳給 Web 的 `SaveHighLow52ToCsv`(Web 讀取最新的 CSV)。
 
 `daily` 成功寫入當日資料後,以及 `backfill` 結束時,會刪除超過 `RetainTradingDays` 個交易日的舊資料
 (依日期整批刪除,不是每檔各留 N 筆),讓資料庫大小維持穩定。抓取失敗或假日不會刪除。

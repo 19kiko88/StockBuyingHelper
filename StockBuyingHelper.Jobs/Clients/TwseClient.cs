@@ -3,7 +3,7 @@ using System.Text.Json;
 using Serilog;
 using StockBuyingHelper.Jobs.Models;
 
-namespace StockBuyingHelper.Jobs.Twse;
+namespace StockBuyingHelper.Jobs.Clients;
 
 public sealed record TwseFetchResult(bool IsTradingDay, IReadOnlyList<DailyQuote> Quotes);
 

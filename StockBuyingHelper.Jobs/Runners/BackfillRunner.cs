@@ -1,10 +1,10 @@
 using Serilog;
 using StockBuyingHelper.Jobs.Data;
-using StockBuyingHelper.Jobs.Twse;
+using StockBuyingHelper.Jobs.Clients;
 
 namespace StockBuyingHelper.Jobs.Runners;
 
-public sealed class BackfillRunner
+public sealed class BackfillRunner : IJob
 {
     private readonly TwseClient _client;
     private readonly PriceDatabase _database;

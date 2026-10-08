@@ -1,18 +1,19 @@
 using Serilog;
 using StockBuyingHelper.Jobs.Data;
-using StockBuyingHelper.Jobs.Twse;
-using StockBuyingHelper.Jobs.Upload;
+using StockBuyingHelper.Jobs.Clients;
 
 namespace StockBuyingHelper.Jobs.Runners;
 
-public sealed class DailyRunner
+public sealed class DailyRunner : IJob
 {
+    private const string HighLow52Endpoint = "SaveHighLow52ToCsv";
+
     private readonly TwseClient _client;
     private readonly PriceDatabase _database;
-    private readonly HighLow52Uploader _uploader;
+    private readonly VpsUploader _uploader;
     private readonly int _retainTradingDays;
 
-    public DailyRunner(TwseClient client, PriceDatabase database, HighLow52Uploader uploader, int retainTradingDays)
+    public DailyRunner(TwseClient client, PriceDatabase database, VpsUploader uploader, int retainTradingDays)
     {
         _client = client;
         _database = database;
@@ -47,6 +48,6 @@ public sealed class DailyRunner
             Log.Information("已刪除超過 {Retain} 個交易日的舊資料,共 {Deleted} 筆", _retainTradingDays, deleted);
         }
 
-        await _uploader.UploadAsync(_database.GetHighLow52(today));
+        await _uploader.UploadAsync(HighLow52Endpoint, _database.GetHighLow52(today));
     }
 }
