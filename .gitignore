@@ -439,3 +439,9 @@ Contents
 
 # StockBuyingHelper.Jobs local SQLite data
 StockBuyingHelper.Jobs/*.db
+
+# StockBuyingHelper.Jobs local secrets (API key)
+StockBuyingHelper.Jobs/appsettings.Local.json
+
+# StockBuingHelper.Web local secrets (API key)
+StockBuingHelper.Web/appsettings.Local.json

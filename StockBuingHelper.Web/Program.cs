@@ -13,6 +13,8 @@ using Coravel;
 using StockBuingHelper.Web.Tasks;
 
 var builder = WebApplication.CreateBuilder(args);
+// 放金鑰等機敏設定的本機檔案,不進版控;檔案不存在時略過
+builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true);
 var logger = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)
     .Enrich.FromLogContext()

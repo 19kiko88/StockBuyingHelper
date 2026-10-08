@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using StockBuingHelper.Web.Dtos.Request;
 using StockBuingHelper.Web.Dtos.Response;
+using StockBuingHelper.Web.Filters;
 using StockBuyingHelper.Models;
 using StockBuyingHelper.Models.Models;
 using StockBuyingHelper.Service.Interfaces;
@@ -298,7 +299,8 @@ namespace StockBuingHelper.Web.Controllers
         }
 
         [HttpPost]
-        [AllowAnonymous] // 允許匿名訪問，不用jwt
+        [AllowAnonymous] // 不用 jwt,改以 X-Api-Key 驗證
+        [ApiKey]
         public IActionResult SaveHighLow52ToCsv([FromBody] List<ReqHighLow52Dto> data)
         {
             var msg = string.Empty;
@@ -364,7 +366,8 @@ namespace StockBuingHelper.Web.Controllers
         }
 
         [HttpPost]
-        [AllowAnonymous] // 允許匿名訪問，不用jwt
+        [AllowAnonymous] // 不用 jwt,改以 X-Api-Key 驗證
+        [ApiKey]
         public IActionResult Save0050List([FromBody] List<string> data)
         {
             var msg = string.Empty;

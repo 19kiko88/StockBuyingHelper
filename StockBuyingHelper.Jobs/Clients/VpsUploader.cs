@@ -7,11 +7,13 @@ public sealed class VpsUploader
 {
     private readonly HttpClient _httpClient;
     private readonly string? _baseUrl;
+    private readonly string? _apiKey;
 
-    public VpsUploader(HttpClient httpClient, string? baseUrl)
+    public VpsUploader(HttpClient httpClient, string? baseUrl, string? apiKey)
     {
         _httpClient = httpClient;
         _baseUrl = baseUrl;
+        _apiKey = apiKey;
     }
 
     public async Task UploadAsync<T>(string endpoint, IReadOnlyList<T> data, CancellationToken cancellationToken = default)
@@ -30,7 +32,19 @@ public sealed class VpsUploader
         }
 
         var url = $"{_baseUrl.TrimEnd('/')}/{endpoint}";
-        using var response = await _httpClient.PostAsJsonAsync(url, data, cancellationToken);
+
+        // 金鑰只加在這個請求上,不能放 DefaultRequestHeaders,否則同一個 HttpClient 打證交所時也會一併送出
+        using var request = new HttpRequestMessage(HttpMethod.Post, url) { Content = JsonContent.Create(data) };
+        if (string.IsNullOrWhiteSpace(_apiKey))
+        {
+            Log.Warning("未設定 VpsApiKey,以未驗證方式上傳 {Endpoint}", endpoint);
+        }
+        else
+        {
+            request.Headers.Add("X-Api-Key", _apiKey);
+        }
+
+        using var response = await _httpClient.SendAsync(request, cancellationToken);
         var body = await response.Content.ReadAsStringAsync(cancellationToken);
 
         if (!response.IsSuccessStatusCode)

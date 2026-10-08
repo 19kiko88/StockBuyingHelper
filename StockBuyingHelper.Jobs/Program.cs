@@ -7,6 +7,7 @@ using StockBuyingHelper.Jobs.Clients;
 var configuration = new ConfigurationBuilder()
     .SetBasePath(AppContext.BaseDirectory)
     .AddJsonFile("appsettings.json", optional: false)
+    .AddJsonFile("appsettings.Local.json", optional: true)
     .Build();
 
 var dbPath = configuration["DbPath"] ?? "stock.db";
@@ -14,6 +15,8 @@ var baseUrl = configuration["BaseUrl"] ?? throw new InvalidOperationException("�
 var requestDelaySeconds = configuration.GetValue<int?>("RequestDelaySeconds") ?? 5;
 var backfillDays = configuration.GetValue<int?>("BackfillDays") ?? 380;
 var vpsBaseUrl = configuration["VpsBaseUrl"];
+// 金鑰不可放進被追蹤的 appsettings.json;優先讀環境變數,其次讀不進版控的 appsettings.Local.json
+var vpsApiKey = Environment.GetEnvironmentVariable("SBH_VPS_API_KEY") ?? configuration["VpsApiKey"];
 var retainTradingDays = configuration.GetValue<int?>("RetainTradingDays") ?? PriceDatabase.MinRetainTradingDays;
 
 Log.Logger = new LoggerConfiguration()
@@ -41,7 +44,7 @@ try
     var database = new PriceDatabase(Path.Combine(AppContext.BaseDirectory, dbPath));
     database.EnsureSchema();
 
-    var uploader = new VpsUploader(httpClient, vpsBaseUrl);
+    var uploader = new VpsUploader(httpClient, vpsBaseUrl, vpsApiKey);
 
     var jobs = new Dictionary<string, Func<IJob>>
     {
